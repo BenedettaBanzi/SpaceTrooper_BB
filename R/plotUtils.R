@@ -39,7 +39,7 @@
 #' @return a ggplot2 theme object
 #' @importFrom ggplot2 theme element_blank element_rect element_text
 #' @keywords internal
-.centroid_image_theme <- function(back.border=NA,){
+.centroid_image_theme <- function(back.border=NA){
     theme(panel.border=element_rect(color = "black"),
           legend.key=element_blank(),
           axis.line=element_blank(),
