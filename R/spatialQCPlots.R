@@ -55,7 +55,7 @@ plotCellsFovs <- function(spe, sample_id=unique(spe$sample_id),
                   alpha=alpha_numbers) +
         ggtitle(sample_id) +
         .fov_image_theme(back.color="white", back.border="white",
-                         title.col="black") + coord_fixed()
+                         title.col="black") + ggplot2::coord_fixed()
     return(ggp)
 }
 
