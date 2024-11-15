@@ -511,6 +511,93 @@ plotPolygonsSPE_ggplot <- function(spe, colour_by=NULL,
     return(p)
 }
 
+#' plotQCScoreTerms
+#' @description
+#'
+#' Plots the terms combined together in the quality score formula to allow viewing
+#' which term impacts most on the quality score.
+#'
+#' This function Plots the terms combined together in the quality score formula
+#' to allow viewing which term impacts most on the quality score within a
+#' `SpatialExperiment` object.
+#'
+#' @param spe A `SpatialExperiment` object containing spatial transcriptomics
+#' data.
+#' @param sample_id
+#' Must match values in the `fov` column of `colData(spe)`.
+#' @param palette
+#' @param size
+#' @param alph
+#' @param aspect_ratio
+#' @param custom A boolean value. If TRUE, custom polygons derived metrics will
+#' be used.
+#'
+#' @return A panel with multiple plots showing quality score terms
+#'
+#' @importFrom scater
+#' @importFrom ggplot2 cowplot
+#' @export
+#'
+#' @examples
+#' # Assuming 'spe' is a SpatialExperiment object with FOVs and polygon data:
+#' # plotZoomFovsMap(spe, fovs = c("FOV1", "FOV2"), colour_by = "cell_type",
+#' #                title = "Zoomed FOVs with Polygons")
+
+plotQCscoreTerms <- function(spe,
+                             sample_id=unique(spe$sample_id),
+                             palette=NULL,
+                             size=0.05, alpha=0.2,
+                             aspect_ratio=1, custom = FALSE)
+{
+    stopifnot(all("quality_score" %in% colnames(colData(spe))))
+    if(metadata(spe)$technology=="Nanostring_CosMx")
+    {
+        if(custom==TRUE){
+            ggp <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
+                                       y=spatialCoordsNames(spe)[2],
+                                       colour_by="cust_log2CountArea",
+                                       point_size=size, point_alpha=alpha)+
+                ggtitle(sample_id)+ .centroid_image_theme() + coord_fixed()
+
+            ggp2 <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
+                                        y=spatialCoordsNames(spe)[2],
+                                        colour_by="cust_log2AspectRatio",
+                                        point_size=size, point_alpha=alpha)+
+                ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+        } else {
+            ggp <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
+                                       y=spatialCoordsNames(spe)[2],
+                                       colour_by="log2CountArea",
+                                       point_size=size, point_alpha=alpha)+
+                ggtitle(sample_id)+ .centroid_image_theme() + coord_fixed()
+
+            ggp2 <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
+                                        y=spatialCoordsNames(spe)[2],
+                                        colour_by="log2AspectRatio",
+                                        point_size=size, point_alpha=alpha)+
+                ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+        }
+
+        ggp3 <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
+                                    y=spatialCoordsNames(spe)[2],
+                                    colour_by="dist_border",
+                                    point_size=size, point_alpha=alpha)+
+            ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+
+        ggp <- cowplot::plot_grid(ggp, ggp2, ggp3, ncol = 2)
+    } else {
+        ## check if column variable is logical to impose our colors
+        ggp <- ggp1 <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
+                                           y=spatialCoordsNames(spe)[2],
+                                           colour_by="log2CountArea",
+                                           point_size=size, point_alpha=alpha)+
+            ggtitle(sample_id)+ .centroid_image_theme() + coord_fixed()
+    }
+
+    return(ggp)
+}
+
+
 
 #' FirstFilterPlot
 #' @description
