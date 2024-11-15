@@ -107,10 +107,6 @@ readCosmxSPE <- function(dirname,
         colnames(fov_positions)[fovccdx] <- gsub("_px", "_global_px",
                                                  colnames(fov_positions)[fovccdx])
     }
-    if(length(fovccdx)==0){
-        fov_positions <- fov_positions |> mutate(x_global_px = x_mm/0.12028*10^3, y_global_px =
-                                                     (y_mm/0.12028*10^3) - 4256)
-    }
 
     ## tracking if one of more fov is not present in the metadata file ##
     idx <- fov_positions$fov %in% unique(metadata$fov)
