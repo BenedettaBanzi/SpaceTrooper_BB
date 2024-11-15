@@ -42,14 +42,14 @@
 #' #spe <- readCosmxSPE(dirname = "path/to/cosmx_data")
 ## for old fovs consider dimensions 5472 x 3648 pixels.
 readCosmxSPE <- function(dirname,
-                        sample_name="sample01",
-                        coord_names=c("CenterX_global_px", "CenterY_global_px"),
-                        countmatfpattern="exprMat_file.csv",
-                        metadatafpattern="metadata_file.csv",
-                        polygonsfpattern="polygons.csv",
-                        keep_polygons=FALSE,
-                        fovposfpattern="fov_positions_file.csv",
-                        fov_dims=c(xdim=4256, ydim=4256))
+                         sample_name="sample01",
+                         coord_names=c("CenterX_global_px", "CenterY_global_px"),
+                         countmatfpattern="exprMat_file.csv",
+                         metadatafpattern="metadata_file.csv",
+                         polygonsfpattern="polygons.csv",
+                         ## polygons=FALSE/in memory/parquet
+                         fovposfpattern="fov_positions_file.csv",
+                         fov_dims=c(xdim=4256, ydim=4256))
 {
     stopifnot(all(names(fov_dims) == c("xdim", "ydim"), file.exists(dirname)))
     countmat_file <- list.files(dirname, countmatfpattern, full.names=TRUE)
@@ -65,7 +65,7 @@ readCosmxSPE <- function(dirname,
     metadata <- data.table::fread(metadata_file, showProgress=FALSE) # cell metadata
 
     # Count matrix
-    counts <- merge.data.table(countmat, metadata[, c("fov", "cell_ID")])
+    counts <- merge(countmat, metadata[, c("fov", "cell_ID")], sort = FALSE)
     cn <- paste0("f", counts$fov, "_c", counts$cell_ID)
     counts <- subset(counts, select = -c(fov, cell_ID))
 
@@ -81,8 +81,7 @@ readCosmxSPE <- function(dirname,
     # use readSparseCSV sparseArray from harve pege
 
     # colData
-    colData <- DataFrame(merge.data.table(metadata,
-                                        countmat[, c("fov", "cell_ID")]))
+    colData <- DataFrame(merge(metadata, countmat[, c("fov", "cell_ID")], , sort = FALSE))
     rn <- paste0("f", colData$fov, "_c", colData$cell_ID)
     rownames(colData) <- rn
 
@@ -100,11 +99,17 @@ readCosmxSPE <- function(dirname,
     ## output file
     fovcidx <- grep("FOV", colnames(fov_positions))
     if(length(fovcidx)!=0) colnames(fov_positions)[fovcidx] <- "fov"
-    fovccdx <- grep("[X|Y]_px", colnames(fov_positions))
+    fovcrdx <- grep("[X|Y|Z]", colnames(fov_positions))
+    if(length(fovcrdx)!=0) colnames(fov_positions)[fovcrdx] <- tolower(colnames(fov_positions)[fovcrdx])
+    fovccdx <- grep("[x|y]_px", colnames(fov_positions))
     if(length(fovccdx)!=0)
     {
         colnames(fov_positions)[fovccdx] <- gsub("_px", "_global_px",
-                                            colnames(fov_positions)[fovccdx])
+                                                 colnames(fov_positions)[fovccdx])
+    }
+    if(length(fovccdx)==0){
+        fov_positions <- fov_positions |> mutate(x_global_px = x_mm/0.12028*10^3, y_global_px =
+                                                     (y_mm/0.12028*10^3) - 4256)
     }
 
     ## tracking if one of more fov is not present in the metadata file ##
@@ -119,21 +124,12 @@ readCosmxSPE <- function(dirname,
         colData = colData,
         spatialCoordsNames = coord_names,
         metadata=list(fov_positions=fov_positions, fov_dim=fov_dims,
-                        polygons=pol_file, technology="Nanostring_CosMx")
+                      polygons=pol_file, technology="Nanostring_CosMx")
         ## keep atomx versioning in metadata, if possible
     )
-
-    #### CHANGE SPE constructor WITH COORDINATES IN COLDATA #########
-    colData(spe) <- cbind.DataFrame(colData(spe), spatialCoords(spe))
-
     # Polygons file has cellID instead of cell_ID and it distinguish better
     # when compared to our cell_id
     names(colData(spe))[names(colData(spe))=="cell_ID"] <- "cellID"
-    if(keep_polygons)
-    {
-        polygons <- readPolygonsCosmx(metadata(spe)$polygons)
-        spe <- addPolygonsToSPE(spe, polygons)
-    }
     return(spe)
 }
 
