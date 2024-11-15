@@ -140,7 +140,7 @@ plotCentroidsSPE <- function(spe, colour_by=NULL, order_by=NULL,
     {
         ggp <- ggp + ggplot2::scale_color_gradient(low="white", high="red",
                                           name=colour_by)+
-            .negative_image_theme()+coord_fixed()
+            .negative_image_theme()+ggplot2::coord_fixed()
 
     } else if(all(!is.null(palette), (palette %in% names(colData(spe))))) {
         palette <- createPaletteFromColData(spe, palette_names=colour_by,

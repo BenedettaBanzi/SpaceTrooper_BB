@@ -8,9 +8,9 @@ plotZoomFovsMap(
   spe,
   fovs = NULL,
   colour_by = NULL,
-  map_point_col = "darkmagenta",
+  map_point_col = "darkred",
   map_numbers_col = "black",
-  map_alpha_numbers = 0.8,
+  map_alpha_numbers = 0.6,
   title = NULL,
   ...,
   useggplot = TRUE

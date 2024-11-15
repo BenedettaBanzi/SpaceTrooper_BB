@@ -12,7 +12,8 @@ plotPolygonsSPE(
   palette = NULL,
   border_col = NA,
   border_alpha = NA,
-  border_line_width = 0.1
+  border_line_width = 0.1,
+  bg_color = "black"
 )
 }
 \arguments{

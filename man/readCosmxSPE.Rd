@@ -11,7 +11,6 @@ readCosmxSPE(
   countmatfpattern = "exprMat_file.csv",
   metadatafpattern = "metadata_file.csv",
   polygonsfpattern = "polygons.csv",
-  keep_polygons = FALSE,
   fovposfpattern = "fov_positions_file.csv",
   fov_dims = c(xdim = 4256, ydim = 4256)
 )
@@ -36,14 +35,14 @@ the metadata file. Default is `"metadata_file.csv"`.}
 \item{polygonsfpattern}{A character string specifying the pattern to match
 the polygons file. Default is `"polygons.csv"`.}
 
-\item{keep_polygons}{A logical value indicating whether to include polygon
-data in the resulting `SpatialExperiment` object. Default is `FALSE`.}
-
 \item{fovposfpattern}{A character string specifying the pattern to match the
 FOV positions file. Default is `"fov_positions_file.csv"`.}
 
 \item{fov_dims}{A named numeric vector specifying the dimensions of the FOV
 in pixels. Default is `c(xdim=4256, ydim=4256)`.}
+
+\item{keep_polygons}{A logical value indicating whether to include polygon
+data in the resulting `SpatialExperiment` object. Default is `FALSE`.}
 }
 \value{
 A `SpatialExperiment` object containing the read CosMx data,

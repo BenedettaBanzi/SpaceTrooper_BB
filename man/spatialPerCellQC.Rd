@@ -7,8 +7,8 @@
 spatialPerCellQC(
   spe,
   micronConvFact = 0.12,
-  negProbList = c("NegPrb", "Negative", "SystemControl", "NegControlProbe",
-    "NegControlCodeWord", "UnassignedCodeWord", "Blank")
+  negProbList = c("NegPrb", "Negative", "SystemControl", "Ms IgG1", "Rb IgG",
+    "NegControlProbe", "NegControlCodeWord", "UnassignedCodeWord", "Blank")
 )
 }
 \arguments{

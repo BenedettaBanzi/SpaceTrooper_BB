@@ -7,7 +7,7 @@
 plotCellsFovs(
   spe,
   sample_id = unique(spe$sample_id),
-  point_col = "darkmagenta",
+  point_col = "firebrick",
   numbers_col = "black",
   alpha_numbers = 0.8
 )

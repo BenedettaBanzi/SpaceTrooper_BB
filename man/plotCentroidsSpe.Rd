@@ -14,9 +14,7 @@ plotCentroidsSPE(
   point_col = "darkmagenta",
   size = 0.05,
   alpha = 0.2,
-  aspect_ratio = 1,
-  legend_point_size = 2,
-  legend_point_alpha = 0.8
+  aspect_ratio = 1
 )
 }
 \arguments{
