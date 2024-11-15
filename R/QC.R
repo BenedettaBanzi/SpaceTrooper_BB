@@ -383,10 +383,10 @@ qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
                 dist_border > 50) |>
             dplyr::mutate(qscore_train = 1) |> dplyr::sample_n(dim(train_df1)[1])
 
-        train_df <- train_df1 %>%
-            dplyr::mutate(rn = data.table::rowid(cell_id)) %>%
-            dplyr::full_join(train_df2 %>%
-                          dplyr::mutate(rn = data.table::rowid(cell_id))) %>%
+        train_df <- train_df1 |>
+            dplyr::mutate(rn = data.table::rowid(cell_id)) |>
+            dplyr::full_join(train_df2 |>
+                          dplyr::mutate(rn = data.table::rowid(cell_id))) |>
             dplyr::select(-rn)
 
         model <- glm(qscore_train ~ cust_log2CountArea +
@@ -441,10 +441,10 @@ qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
                 dist_border > 50) |>
             dplyr::mutate(qscore_train = 1) |> dplyr::sample_n(dim(train_df1)[1])
 
-        train_df <- train_df1 %>%
-            dplyr::mutate(rn = data.table::rowid(cell_id)) %>%
-            dplyr::full_join(train_df2 %>%
-                          dplyr::mutate(rn = data.table::rowid(cell_id))) %>%
+        train_df <- train_df1 |>
+            dplyr::mutate(rn = data.table::rowid(cell_id)) |>
+            dplyr::full_join(train_df2 |>
+                          dplyr::mutate(rn = data.table::rowid(cell_id))) |>
             dplyr::select(-rn)
 
         model <- glm(qscore_train ~ log2CountArea + I(abs(log2AspectRatio) *

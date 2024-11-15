@@ -675,7 +675,7 @@ FirstFilterPlot <- function(spe, fov = unique(spe$fov), theme = c("light", "dark
 
 
     ggp1 <- ggplot2::ggplot() +
-        ggplo2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
+        ggplot2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
                 ggplot2::aes(fill=fixed_flags_color, color = fixed_flags_color),
                 lwd = 0, show.legend = "polygon") +
         ggplot2::scale_fill_manual(values = outlier_palette)+
@@ -697,14 +697,14 @@ FirstFilterPlot <- function(spe, fov = unique(spe$fov), theme = c("light", "dark
 
     legp <- ggplot2::ggplot() +
         ggplot2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
-                ggplo2::aes(fill = collapsed_color, color = collapsed_color), lwd = 0,
+                ggplot2::aes(fill = collapsed_color, color = collapsed_color), lwd = 0,
                 show.legend = "polygon") +
         ggplot2::scale_fill_manual(values = outlier_palette)+
         ggplot2::scale_color_manual(values = outlier_palette)+theme(legend.title = element_blank())
 
     if(theme=="light"){
-        ggp1 <- ggp1 + .light_theme() + ggplo2::ggtitle("Control counts ratio") +
-            ggplo2::theme(legend.position="none")
+        ggp1 <- ggp1 + .light_theme() + ggplot2::ggtitle("Control counts ratio") +
+            ggplot2::theme(legend.position="none")
         ggp2 <- ggp2 + .light_theme() + ggplot2::ggtitle("Area in um") +
             ggplot2::theme(legend.position="none")
         ggp3 <- ggp3 + .light_theme() + ggplot2::ggtitle("Mean DAPI") +
