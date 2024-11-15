@@ -1,0 +1,462 @@
+---
+title: "10_29_SpaceTrooper_demo_DBKero_source_24_10"
+author: "Benedetta Banzi"
+date: "2024-10-28"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+<STYLE TYPE="text/css">
+<!--
+  td{
+    font-family: Arial; 
+    font-size: 10 pt;
+    padding:0px;
+    cellpadding="0";
+    cellspacing="0"
+  }
+  th {
+    font-family: Arial; 
+    font-size: 10 pt;
+    height: 20px;
+    font-weight: bold;
+    text-align: "center";
+    background-color: #ccccff;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  table { 
+    border-spacing: 4px;
+    border-collapse: collapse;
+  }
+--->
+</STYLE>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Library and functions import
+
+```{r}
+library(SpaceTrooper)
+```
+
+Setting directory: path to where all needed DBKero input files are stored. You can download all of them at: https://kero.hgc.jp/cgi-bin/download/Breast_Cancer_data/CosMX_data_Case2.zip 
+- Run5810_Case2_exprMat_file.csv - count matrix
+- Run5810_Case2_fov_positions_file.csv - fov position file
+- Run5810_Case2_metadata_file.csv - cell metadata
+- Run5810_Case2-polygons.csv - cell polygons
+
+```{r}
+dirname <- "/NAS06/work/Spatial_omics/DBKero/CosMx_Breast/CosMX_data_Case2"
+sample_name <- "CosMx_DBKero_BC"
+```
+
+# Data import and SpatialExperiment object creation {.tabset .tabset-fade .tabset-pills}
+
+## SpatialExperiment object creation
+
+The structure is very similar to SeuratObject. It's an R/Bioconductor S4 class with nested slots.
+
+```{r}
+spe <- readCosmxSPE(dirname = dirname, sample_name=sample_name, fov_dims=c(xdim=4256, ydim=4256))
+spe
+```
+
+## To learn more
+
+SpatialExperiment (SPE) is provided with some **matrix-like methods** such as:
+
+```{r}
+dim(spe)
+```
+
+As you can notice, the structure of the count matrix inside the SPE object is **genes x cells**.
+Unique cell identifiers are constructed by readCosmxSPE as f(ov) number followed by c(ell) number.
+
+```{r}
+colnames(spe)[1:3]
+```
+
+It is possible to subset using square brackets synchronizing across all attributes.
+
+```{r}
+sub_spe <- spe[, spe$fov == 11]
+```
+
+SPE comes with a 1st hierarchy of slots as follows. To perform SpaceTrooper preprocessing,
+we focus only on 3 slots: colData, assays and metadata.
+
+```{r}
+str(spe, max.level = 2)
+```
+
+Let's start with **"assays" slot**: it contains the experiment assay, just like SeuratObject.
+
+**Tip**: the count matrix here isn't a sparse matrix of dgCMatrix class but a normal matrix.
+
+```{r}
+str(spe@assays)
+```
+
+In order to access directly to the count matrix, you must enter 2 levels of slots before, which are lists.
+This is recurrent in SingleCellExperiment-based data structures, as they tend to organize data into lists.
+However, they provide accessors to directly access these data with analogous results, just as below:
+
+```{r}
+str(spe@assays@data@listData$counts)
+#counts(spe) is the accessor
+```
+
+**colData slot**: it contains cell metadata. If during the creation of the SPE we would have had genes' metadata
+they would be stored in a similar slot, called rowData. Again, metadata contained in CosMx metadata input file
+are inserted into a list.
+
+**Tip**: sometimes it is useful to export the whole cell metadata and convert them in dataframe to perform different tasks, such as plots with ggplot.
+
+```{r}
+str(spe@colData@listData) #list, needs to be converted in df outside of SPE
+#colData(spe) # returns the hierarchy before listData
+```
+
+Also in this case some accessors are available and allow you to directly access cell metadata elements. 
+
+```{r}
+str(colData(spe)$fov) # vector
+#spe$fov
+```
+
+**Tip**: how to remove a cell metadata variable?
+Of course tou can choose the obvious solution of assignining NULL to the variable in the SPE object, but here's also the complex way to do it.
+
+```{r}
+#spe$CenterX_local_px <- NULL
+
+#coldata <- data.frame(colData(spe))
+#coldata <- coldata |> select(!c("CenterX_local_px"))
+#spe@colData@listData <- as.list(coldata)
+```
+
+**metadata slot**: it contains cell experiment metadata and it's used to store further data, such as the fov position file, the fov dimensions, the path to the polygon files and the technology name. Again this slot is
+provided with an accessor.
+
+```{r}
+str(spe@metadata)
+#metadata(spe) it's the accessor
+```
+
+**Extra**: Some interesting information is stored in a further slot: int_colData. They're not crucial for preprocessing but could be for downstream analysis. Spatial coordinates x and y of cell centroids in pixel are retrieved by cell metadata and stored here as well, they will be used by plotting functions, plus here are saved dimensionality reductions.
+
+```{r}
+str(spe@int_colData@listData) 
+#spatialCoords(spe) == spe$CenterX_global_px, spe$CenterY_global_px
+```
+
+# Count QC and other metrics {.tabset .tabset-fade .tabset-pills}
+
+## Scater QC
+
+```{r}
+spe <- spatialPerCellQC(spe, micronConvFact=0.12)
+```
+
+## To learn more
+
+Some new columns have been added by spatialPerCellQC: 
+"sample_id" = sample name,
+"sum" = total counts per cell, 
+"detected" = unique detected probes per cell, 
+"subsets_NegPrb_sum" = control negative probe counts per cell, 
+"subsets_NegPrb_detected" = unique detected negative probes per cell, 
+"subsets_NegPrb_percent" = percentage of negative probe counts on total counts, 
+"total" = analogous to sum, 
+"control_sum" = sums all control probe counts per cell (in this case only one type of control probes is present),
+"control_detected" = unique control probe (considering all control probe types) detected per cell, 
+"target_sum" = only target probe counts per cell (total - all control counts), 
+"target_detected" = unique detected target genes per cells, 
+"CenterX_global_px" = centroid x coordinate of the cell in pixel,       
+"CenterY_global_px" = centroid y coordinate of the cell in pixel, 
+"CenterX_global_um" = centroid x coordinate of the cell in um (multiplied by micron conversion factor), "CenterY_global_um" = centroid y coordinate of the cell in um, 
+"Area_um" = cell area converted to um using (micron conversion factor)^2, 
+"log2AspectRatio" = log2-transformed aspect ratio which is height/width ratio, 
+"ctrl_total_ratio" = all control probe count on total count ratio,
+"log2CountArea", log2-transformed target count on cell area in um ratio. 
+
+# Polygons loading {.tabset .tabset-fade .tabset-pills}
+
+## Adding custom polygons
+
+To make things simpler... make sure to have only one polygons file inside your data directory.
+
+```{r}
+metadata(spe)$polygons <- NULL
+metadata(spe)$polygons <- "/NAS06/work/Spatial_omics/DBKero/CosMx_Breast/CosMX_data_Case2/Run5810_Case2-polygons.csv"
+
+polygons <- readPolygonsCosmx(polygonsFile=metadata(spe)$polygons, type="csv", keepMultiPol=TRUE, verbose=FALSE)
+
+spe <- addPolygonsToSPE(spe, polygons)
+```
+
+## To learn more
+
+Polygons is an sf object stored as an element of colData list. An sf object is a dataframe + a geometry, namely a list of coordinates. Coordinates can be stored in different data structures according to the geometry type they describe (i.e. polygon, multipolygon, point ecc.)
+SpaceTrooper creates two lists of polygon coordinates - called global and local - the first using the global x and y coordinates and the second with local coordinates.
+
+```{r}
+str(spe$polygons)
+```
+
+Exploring the global geometry, it's a further data structure called sfc object containing a single polygon coordinates per each cell.
+
+```{r}
+spe$polygons$global
+```
+
+Since the global geometry is basically a list, this is how to retrieve the first polygon:
+
+```{r}
+spe$polygons$global[[1]]
+```
+
+Since each polygon is composed by multiple points each with an x and a y coordinate, each polygon is stored as a matrix. The following code lines are synonymous ways to return the first polygon in matrix format.
+
+```{r}
+spe$polygons$global[[1]][[1]]
+#spe$polygons$global[[1]][1]
+```
+
+However, only this code line allow to run matrix methods on the first polygon, not the second line. This can be useful to run operations on polygons coordinates, for example when we compute manually aspect ratio. 
+
+```{r}
+spe$polygons$global[[1]][[1]][1,] # returns only the first point coordinates
+#spe$polygons$global[[1]][1][1,] doesn't work
+```
+
+**Tip**: in order to change the active geometry, the one that is used by default by sf functions, you can use the following command and replace global with another geometry name. The same command can be used to rename the active geometry, by replacing global with a desired name.
+
+```{r}
+#st_geometry(spe$polygons) <- "global"
+```
+
+# Global sample maps {.tabset .tabset-fade .tabset-pills}
+
+## Cell centroids in FOV grid
+
+The following plot represents all cell centroids on global scale together with the FOV numbered grid, to know at a glance where cells are distributed among FOVs.
+
+```{r}
+plotCellsFovs(spe)
+```
+
+## Global polygons map
+
+You can also view the polygons on a global scale.
+
+```{r}
+plotPolygonsSPE(spe, bg_color = "white")
+```
+
+# Preliminary plots {.tabset .tabset-fade .tabset-pills}
+
+## Polygons colored by variable
+
+It's still the previous function but with some different parameters. It allows to color polygons with a gradient scale to represent a continuous variable such as log2AspectRatio.
+
+```{r}
+plotPolygonsSPE(spe, colour_by = "log2AspectRatio", bg_color = "black", border_col=NULL) # def bg is black
+```
+
+## Feature map
+
+It's similar to the previous function but it plots cells' centroids instead of polygons.
+
+```{r}
+plotCentroidsSPE(spe, colour_by="total", alpha = 1)
+```
+
+```{r}
+plotCentroidsSPE(spe, colour_by="control_sum", isNegativeProbe=TRUE, alpha = 1, order_by = "control_sum")
+```
+
+## Metric histogram
+
+Simple plot to view single metrics' distributions as histograms. 
+
+```{r}
+plotMetricHist(spe, metric="Area_um")
+```
+
+# First flagging {.tabset .tabset-fade .tabset-pills}
+
+Spatial outlier detection for mean DAPI signal and area in um. In this case, we're going to perform the outlier detected using both Medcouple (Hubert, M. and Vandervieren, E. 2008) and MAD contained in scater::isOutlier method. Two new variables will be added per each metric to colData slot: metric_outlier_mc and metric_outlier_sc. Both of them contain attributes referring to lower and higher thresholds identified by the two test to identify outliers. However if you wish to perform only one method of outlier detection, you can set method to "mc" or "scuttle".
+
+```{r}
+spe <- computeSpatialOutlier(spe, compute_by="Mean.DAPI", method="both")
+
+spe <- computeSpatialOutlier(spe, compute_by="Area_um", method="both")
+
+str(spe$Area_um_outlier_mc) # fences for both included
+```
+
+Plot metric histogram with thresholds
+
+```{r}
+plotMetricHist(spe, metric="Area_um", use_fences="Area_um_outlier_mc")
+```
+
+# Second flagging {.tabset .tabset-fade .tabset-pills}
+
+Quality score is defined as:
+
+1 / (1 + exp(-1 * log2countbyarea + 1 * abs(log2AspectRatio) * as.numeric(spe$dist_border<50)))
+
+```{r}
+spe <- computeQCScore(spe)
+str(spe$quality_score)
+```
+
+First, let's take a look at the different terms defining the quality score
+
+```{r}
+plotQCscoreTerms(spe)
+```
+
+Now quality score weights are optimized in a data-driven fashion. First of all,
+fixed thresholds flagged cells for 0 counts and control counts on total counts ratio must be identified
+to label these cells as low quality examples for the training.
+
+```{r}
+spe <- computeFixedFlags(spe)
+```
+
+Quality score optimization through Generalized Linear Model training
+
+```{r}
+spe <- qscoreOpt(spe, plot = TRUE, custom = FALSE)
+```
+
+```{r}
+plotMetricHist(spe, metric="quality_score")
+```
+
+```{r}
+plotMetricHist(spe, metric="quality_score_opt")
+```
+
+```{r}
+spe <- computeQscoreFlags(spe, qs_threshold=0.4, opt=TRUE)
+```
+
+# Polygon plotting {.tabset .tabset-fade .tabset-pills}
+
+```{r}
+FirstFilterPlot(spe, fov = c(11:12), theme = "dark", custom = FALSE)
+```
+
+```{r}
+FirstFilterPlot(spe, fov = c(11:12), theme = "light", custom = FALSE)
+```
+
+## Plotting flag score values on fov 11 and 12
+
+```{r}
+spe1112 <- spe[,spe$fov %in% c(11:12)]
+plotPolygonsSPE(spe1112, colour_by="quality_score", palette="viridis")
+```
+
+```{r}
+spe1112 <- spe[,spe$fov %in% c(11:12)]
+plotPolygonsSPE(spe1112, colour_by="quality_score_opt", palette="viridis")
+```
+
+## Zoom plot on global map with FOV grid
+
+```{r}
+plotZoomFovsMap(spe, fovs=c(16:19), colour_by="quality_score")
+```
+
+# Summary table {.tabset .tabset-fade .tabset-pills}
+
+```{r}
+out_boundaries <- c(0, 0.1, 
+               round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[1],2), 
+               round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[2],2),
+               round(attr(spe$Area_um_outlier_mc, "thresholds")[1],2), 
+               round(attr(spe$Area_um_outlier_mc, "thresholds")[2],2),
+               0.4)
+
+flagged_cells <- c(sum(spe$is_zero_counts == TRUE, na.rm = TRUE),
+                   sum(spe$is_ctrl_tot_outlier == TRUE, na.rm = TRUE),
+                   sum(spe$Mean.DAPI < round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[1],2),na.rm = TRUE),
+                   sum(spe$Mean.DAPI > round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[2],2),na.rm = TRUE),
+                   sum(spe$Area_um < round(attr(spe$Area_um_outlier_mc, "thresholds")[1],2), na.rm = TRUE), 
+                   sum(spe$Area_um > round(attr(spe$Area_um_outlier_mc, "thresholds")[2],2), na.rm = TRUE),
+                   sum(spe$quality_score_opt < 0.4, na.rm = TRUE))
+
+unflagged_cells <- c(sum(spe$is_zero_counts == FALSE, na.rm = TRUE),
+                     sum(spe$is_ctrl_tot_outlier == FALSE, na.rm = TRUE),
+                    sum(spe$Mean.DAPI > round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[1],2) & spe$Mean.DAPI < round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[2],2),na.rm = TRUE),
+                     " ",
+                     sum(spe$Area_um > round(attr(spe$Area_um_outlier_mc, "thresholds")[1],2) & spe$Area_um < round(attr(spe$Area_um_outlier_mc, "thresholds")[2],2), na.rm = TRUE),
+                     " ",
+                    sum(!spe$quality_score_opt < 0.4, na.rm = TRUE))
+
+union_flagged <- length(unique(c(spe[,spe$is_zero_counts == TRUE]$cell_id,
+                   spe[,spe$Mean.DAPI < round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[1],2) | spe$Mean.DAPI > round(attr(spe$Mean.DAPI_outlier_mc, "thresholds")[2],2)]$cell_id,
+                   spe[,spe$Area_um < round(attr(spe$Area_um_outlier_mc, "thresholds")[1],2) | spe$Area_um > round(attr(spe$Area_um_outlier_mc, "thresholds")[2],2)]$cell_id,
+                   spe[,spe$quality_score_opt < 0.4]$cell_id)))
+
+percent_flagged <- round(flagged_cells/dim(spe)[2]*100, 2)
+
+stat_df <- data.frame(out_boundaries = out_boundaries, unflagged_cells = unflagged_cells, flagged_cells = flagged_cells, percent_flagged = percent_flagged, row.names = c("Total counts", "Control/total counts ratio", "Mean DAPI signal < lower thr.", "Mean DAPI signal > higher thr.","Cell area in um < lower thr.", "Cell area in um > higher thr.", "Quality score"))
+
+library(knitr)
+kable(stat_df, format = "html", col.names = c("Outlier boundaries", "Unflagged cells", "Flagged cells", "% flagged cells"), align = "c", caption = paste0("<center>Flagged cells by different metrics, total cells in whole sample: ", dim(spe)[2], ", total unique flagged cells in whole sample: ", union_flagged, ", % unique flagged cells: ",
+round(union_flagged/dim(spe)[2]*100, 2),"</center>"), padding = 1L)
+
+```
+
+# Bonuses {.tabset .tabset-fade .tabset-pills}
+
+Scatter plot to view correlation of variables + density plot to view distribution of single variables.
+
+```{r}
+library(ggpointdensity)
+library(ggpubr)
+library(cowplot)
+
+cell_df <- data.frame(colData(spe))
+p1 <- ggplot(data = cell_df) +
+  geom_pointdensity(aes(x = sum, y = Area_um)) +
+  scale_color_viridis_c() +
+  theme(legend.position = "none",
+        plot.margin = margin(),
+        panel.border = element_blank())
+
+p2 <- ggdensity(data = cell_df, x = "Area_um", color = "#ccccff", 
+                fill = "#ccccff", alpha = 0.5) + theme_classic() + 
+  theme(legend.position = "none", axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.line.y = element_blank(),
+    axis.line.x = element_blank(),
+    plot.margin = margin()) + coord_flip()
+
+p3 <- ggdensity(data = cell_df, x = "sum", color = "#ccccff", 
+                fill = "#ccccff", alpha = 0.5) + theme_classic() + 
+  theme(legend.position = "none", axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.line.y = element_blank(),
+    plot.margin = margin()) 
+
+plot_grid(p3, NULL, p1, p2, ncol = 2, align = "hv",
+          rel_widths = c(2,1), rel_heights = c(1, 2))
+```
+
