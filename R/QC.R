@@ -321,7 +321,7 @@ computeSpatialOutlier <- function(spe, compute_by=NULL,
 #' these flags into a single filter flag.
 #'
 #' @importFrom SummarizedExperiment colData
-#' @export computeFixedFlag
+#' @export
 #' @examples
 #' # TBD
 computeFixedFlags <- function(spe,
@@ -362,7 +362,7 @@ computeFixedFlags <- function(spe,
 #' @importFrom dplyr filter mutate sample_n full_join
 #' @importFrom ggplot2 ggplot aes geom_point stat_smooth geom_hline theme_bw
 #' @importFrom ggplot2 xlab ylab
-#' @export qscoreOpt
+#' @export
 #' @examples
 #' # TBD
 
@@ -505,7 +505,7 @@ qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
 #' @details
 #'
 #' @importFrom SummarizedExperiment colData
-#' @export computeQscoreFlags
+#' @export
 #' @examples
 #' # TBD
 #'
