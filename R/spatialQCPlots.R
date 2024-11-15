@@ -15,6 +15,7 @@
 #' @importFrom ggplot2 ggplot aes aes_string annotate geom_point geom_text
 #' ggtitle
 #' @import SpatialExperiment
+#' @importFrom ggplot2 coord_fixed
 #' @export
 #'
 #' @examples
