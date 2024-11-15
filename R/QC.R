@@ -369,25 +369,25 @@ computeFixedFlags <- function(spe,
 qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
 
     if(custom==TRUE){
-        train_df1 <- data.frame(colData(spe)) |> filter (is_ctrl_tot_outlier |
+        train_df1 <- data.frame(colData(spe)) |> dplyr::filter (is_ctrl_tot_outlier |
                      cust_Area_um_outlier_mc | Mean.DAPI_outlier_mc) |>
-            mutate(qscore_train = 0)
+            dplyr::mutate(qscore_train = 0)
 
         message(paste0("Chosen low quality examples: ", dim(train_df1)[1]))
 
-        train_df2 <- data.frame(colData(spe)) |> filter(
+        train_df2 <- data.frame(colData(spe)) |> dplyr::filter(
             (cust_log2AspectRatio > summary(cust_log2AspectRatio)[2] &
                  cust_log2AspectRatio < summary(cust_log2AspectRatio)[5]) |
                 (cust_log2CountArea > summary(cust_log2CountArea)[2] &
                  cust_log2CountArea >summary(cust_log2CountArea)[5]) |
                 dist_border > 50) |>
-            mutate(qscore_train = 1) |> sample_n(dim(train_df1)[1])
+            dplyr::mutate(qscore_train = 1) |> dplyr::sample_n(dim(train_df1)[1])
 
         train_df <- train_df1 %>%
-            mutate(rn = data.table::rowid(cell_id)) %>%
-            full_join(train_df2 %>%
-                          mutate(rn = data.table::rowid(cell_id))) %>%
-            select(-rn)
+            dplyr::mutate(rn = data.table::rowid(cell_id)) %>%
+            dplyr::full_join(train_df2 %>%
+                          dplyr::mutate(rn = data.table::rowid(cell_id))) %>%
+            dplyr::select(-rn)
 
         model <- glm(qscore_train ~ cust_log2CountArea +
                          I(abs(cust_log2AspectRatio) * as.numeric(dist_border<50)),
@@ -414,38 +414,38 @@ qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
         }
 
         if(plot == TRUE){
-            print(ggplot(train_df, aes(x = cust_log2CountArea +
+            print(ggplot2::ggplot(train_df, ggplot2::aes(x = cust_log2CountArea +
                                            abs(cust_log2AspectRatio) *
                                            as.numeric(dist_border<50),
                                        y = qscore_train)) +
-                      geom_point(col = "blue4") +
-                      stat_smooth(method = "glm", se = FALSE, method.args =
+                      ggplot2::geom_point(col = "blue4") +
+                      ggplot2::stat_smooth(method = "glm", se = FALSE, method.args =
                                       list(family=binomial), color = "pink2") +
-                      geom_hline(yintercept = c(0, 1), color = "lightblue") +
-                      theme_bw() + ylab("Training quality score") +
-                      xlab("log2(count/area) + |aspectRatio| * distance from border index"))
+                      ggplot2::geom_hline(yintercept = c(0, 1), color = "lightblue") +
+                      ggplot2::theme_bw() + ggplot2::ylab("Training quality score") +
+                      ggplot2::xlab("log2(count/area) + |aspectRatio| * distance from border index"))
             return(spe)
         }
     }else{
-        train_df1 <- data.frame(colData(spe)) |> filter (is_ctrl_tot_outlier |
+        train_df1 <- data.frame(colData(spe)) |> dplyr::filter (is_ctrl_tot_outlier |
                      Area_um_outlier_mc | Mean.DAPI_outlier_mc) |>
-            mutate(qscore_train = 0)
+            dplyr::mutate(qscore_train = 0)
 
         message(paste0("Chosen low quality examples: ", dim(train_df1)[1]))
 
-        train_df2 <- data.frame(colData(spe)) |> filter(
+        train_df2 <- data.frame(colData(spe)) |> dplyr::filter(
             (log2AspectRatio > summary(log2AspectRatio)[2] & log2AspectRatio <
                  summary(log2AspectRatio)[5]) |
                 (log2CountArea > summary(log2CountArea)[2] & log2CountArea >
                      summary(log2CountArea)[5]) |
                 dist_border > 50) |>
-            mutate(qscore_train = 1) |> sample_n(dim(train_df1)[1])
+            dplyr::mutate(qscore_train = 1) |> dplyr::sample_n(dim(train_df1)[1])
 
         train_df <- train_df1 %>%
-            mutate(rn = data.table::rowid(cell_id)) %>%
-            full_join(train_df2 %>%
-                          mutate(rn = data.table::rowid(cell_id))) %>%
-            select(-rn)
+            dplyr::mutate(rn = data.table::rowid(cell_id)) %>%
+            dplyr::full_join(train_df2 %>%
+                          dplyr::mutate(rn = data.table::rowid(cell_id))) %>%
+            dplyr::select(-rn)
 
         model <- glm(qscore_train ~ log2CountArea + I(abs(log2AspectRatio) *
                      as.numeric(dist_border<50)),
@@ -472,15 +472,15 @@ qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
         }
 
         if(plot == TRUE){
-            print(ggplot(train_df, aes(x = log2CountArea + abs(log2AspectRatio) *
+            print(ggplot2::ggplot(train_df, ggplot2::aes(x = log2CountArea + abs(log2AspectRatio) *
                   as.numeric(dist_border<50), y = qscore_train)) +
-                      geom_point(col = "blue4") +
-                      stat_smooth(method = "glm", se = FALSE,
+                      ggplot2::geom_point(col = "blue4") +
+                      ggplot2::stat_smooth(method = "glm", se = FALSE,
                                   method.args = list(family=binomial),
                                   color = "pink2") +
-                      geom_hline(yintercept = c(0, 1), color = "lightblue") +
-                      theme_bw() + ylab("Training quality score") +
-                      xlab("log2(count/area) + |aspectRatio| * distance from border index"))
+                      ggplot2::geom_hline(yintercept = c(0, 1), color = "lightblue") +
+                      ggplot2::theme_bw() + ggplot2::ylab("Training quality score") +
+                      ggplot2::xlab("log2(count/area) + |aspectRatio| * distance from border index"))
             return(spe)
         }
     }

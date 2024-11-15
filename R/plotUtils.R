@@ -37,7 +37,7 @@
 #' @param title.col character indicating the color of the title
 #'
 #' @return a ggplot2 theme object
-#' @importFrom ggplot2 theme element_blank element_rect element_text
+#' @importFrom ggplot2 theme element_blank element_rect
 #' @keywords internal
 .centroid_image_theme <- function(back.border=NA){
     theme(panel.border=element_rect(color = "black"),
@@ -66,7 +66,7 @@
 #' @param fore_color color for all the other elements (default is "white")
 #'
 #' @return a ggplot2 theme object
-#' @importFrom ggplot2 theme element_line element_rect element_text
+#' @importFrom ggplot2 theme element_line element_rect element_text element_blank
 #' @keywords internal
 .negative_image_theme <- function(fill_color="black", fore_color="white"){
     theme(panel.border = element_rect(color = fore_color),
@@ -92,7 +92,7 @@
 #' internal function to setup the white background theme for the First Filter plot
 #'
 #' @return a ggplot2 theme object
-#' @importFrom ggplot2 theme element_line element_rect element_text
+#' @importFrom ggplot2 theme element_blank element_rect
 #' @keywords internal
 .light_theme <- function(){
     theme(panel.border=element_rect(color = "black", linewidth = 0.1),
@@ -114,7 +114,7 @@
 #' @param fore_color color for all the other elements (default is "white")
 #'
 #' @return a ggplot2 theme object
-#' @importFrom ggplot2 theme element_line element_rect element_text
+#' @importFrom ggplot2 theme element_blank element_rect element_text
 #' @keywords internal
 .dark_theme <- function(fill_color="black", fore_color="white"){
     theme(panel.border=element_blank(),

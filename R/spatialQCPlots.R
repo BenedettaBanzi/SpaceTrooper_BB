@@ -101,6 +101,8 @@ plotCellsFovs <- function(spe, sample_id=unique(spe$sample_id),
 #' guide_legend scale_color_gradient scale_color_manual scale_color_gradientn
 #' @importFrom scater plotColData
 #' @importFrom SummarizedExperiment colData
+#' @importFrom ggplot2 ggplot geom_point aes ggtitle theme_bw coord_fixed
+#' @importFrom ggplot2 scale_color_manual scale_color_gradientn
 #' @export
 #'
 #' @examples
@@ -116,24 +118,26 @@ plotCentroidsSPE <- function(spe, colour_by=NULL, order_by=NULL,
                     (colour_by %in% names(colData(spe)))))
     if(is.null(colour_by))
     {
-        ggp <- ggplot() +
-            geom_point(data=as.data.frame(spatialCoords(spe)),
+        ggp <- ggplot2::ggplot() +
+            ggplot2::geom_point(data=as.data.frame(spatialCoords(spe)),
                        mapping=aes_string(x=spatialCoordsNames(spe)[1],
                                           y=spatialCoordsNames(spe)[2]),
                        colour=point_col,
                        fill=point_col,
-                       size=size, alpha=alpha)+ggtitle(sample_id)+theme_bw()+coord_fixed()
+                       size=size, alpha=alpha)+ggplot2::ggtitle(sample_id)+
+            ggplot2::theme_bw()+ggplot2::coord_fixed()
     } else {
         ## check if column variable is logical to impose our colors
         ggp <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
                                    y=spatialCoordsNames(spe)[2],
                                    colour_by=colour_by, order_by=order_by,
                                    point_size=size, point_alpha=alpha)
-        ggp <- ggp + ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+        ggp <- ggp + ggplot2::ggtitle(sample_id) + .centroid_image_theme() +
+            ggplot2::coord_fixed()
     }
     if(isNegativeProbe)
     {
-        ggp <- ggp + scale_color_gradient(low="white", high="red",
+        ggp <- ggp + ggplot2::scale_color_gradient(low="white", high="red",
                                           name=colour_by)+
             .negative_image_theme()+coord_fixed()
 
@@ -142,9 +146,9 @@ plotCentroidsSPE <- function(spe, colour_by=NULL, order_by=NULL,
                                             palette_colors=palette)
         if(is.factor(colData(spe)[[colour_by]]))
         {
-            ggp <- ggp + scale_color_manual(values=palette)+coord_fixed()
+            ggp <- ggp + ggplot2::scale_color_manual(values=palette)+coord_fixed()
         } else if(is.numeric(colData(spe)[[colour_by]])) {
-            ggp <- ggp + scale_color_gradientn(colors=palette)+coord_fixed()
+            ggp <- ggp + ggplot2::scale_color_gradientn(colors=palette)+coord_fixed()
         }
     }
 
@@ -454,63 +458,6 @@ plotZoomFovsMap <- function(spe, fovs = NULL, colour_by = NULL,
     return(final_plot)
 }
 
-
-plotPolygonsSPE_ggplot <- function(spe, colour_by=NULL,
-                                   sample_id=unique(spe$sample_id),
-                                   fill_alpha=1, palette=NULL,
-                                   border_col=NA,
-                                   border_alpha=1,
-                                   border_line_width=0.1,
-                                   draw_borders=TRUE) {
-    stopifnot(is(spe, "SpatialExperiment"))
-    stopifnot("polygons" %in% names(colData(spe)))
-    stopifnot(!is.null(colour_by))
-    pols <- spe$polygons
-
-    if(!is.null(colour_by)) {
-        stopifnot(colour_by %in% names(colData(spe)))
-        pols[[colour_by]] <- colData(spe)[[colour_by]]
-    }
-
-    border_params <- if(draw_borders) {
-        list(color=border_col, size=border_line_width)
-    } else {
-        list(color=NA, size=0)
-    }
-
-    p <- ggplot(pols) + geom_sf(aes(fill=.data[[colour_by]]),
-                                alpha=fill_alpha,
-                                color=border_params$color,
-                                size=border_params$size)
-
-    if(!is.null(colour_by) && is.factor(pols[[colour_by]])) {
-        if(!is.null(palette)) {
-            p <- p + scale_fill_manual(values=palette)
-        }
-    } else if(!is.null(colour_by) && is.numeric(pols[[colour_by]])) {
-        p <- p + scale_fill_viridis_c(option="D")
-    } else {
-        p <- p + scale_fill_identity()
-    }
-
-    p <- p + theme_minimal() +
-        theme(
-            legend.position="right",
-            plot.title.position="plot",
-            plot.title=element_text(face="bold", size=14),
-            plot.margin=margin(0, 0, 0, 0),
-            axis.line=element_blank(),
-            axis.title.x=element_blank(),
-            axis.title.y=element_blank(),
-            axis.ticks=element_blank(),
-            axis.text.y=element_blank(),
-            axis.text.x=element_blank(),
-        ) +
-        labs(title=sample_id, fill=colour_by)
-
-    return(p)
-}
-
 #' plotQCScoreTerms
 #' @description
 #'
@@ -534,8 +481,9 @@ plotPolygonsSPE_ggplot <- function(spe, colour_by=NULL,
 #'
 #' @return A panel with multiple plots showing quality score terms
 #'
-#' @importFrom scater
-#' @importFrom ggplot2 cowplot
+#' @importFrom scater plotColData
+#' @importFrom ggplot2 ggtitle coord_fixed
+#' cowplot
 #' @export
 #'
 #' @examples
@@ -557,13 +505,15 @@ plotQCscoreTerms <- function(spe,
                                        y=spatialCoordsNames(spe)[2],
                                        colour_by="cust_log2CountArea",
                                        point_size=size, point_alpha=alpha)+
-                ggtitle(sample_id)+ .centroid_image_theme() + coord_fixed()
+                ggplot2::ggtitle(sample_id)+ .centroid_image_theme() +
+                ggplot2::coord_fixed()
 
             ggp2 <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
                                         y=spatialCoordsNames(spe)[2],
                                         colour_by="cust_log2AspectRatio",
                                         point_size=size, point_alpha=alpha)+
-                ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+                ggplot2::ggtitle(sample_id) + .centroid_image_theme() +
+                ggplot2::coord_fixed()
         } else {
             ggp <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
                                        y=spatialCoordsNames(spe)[2],
@@ -575,14 +525,16 @@ plotQCscoreTerms <- function(spe,
                                         y=spatialCoordsNames(spe)[2],
                                         colour_by="log2AspectRatio",
                                         point_size=size, point_alpha=alpha)+
-                ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+                ggplot2::ggtitle(sample_id) + .centroid_image_theme() +
+                ggplot2::coord_fixed()
         }
 
         ggp3 <- scater::plotColData(spe, x=spatialCoordsNames(spe)[1],
                                     y=spatialCoordsNames(spe)[2],
                                     colour_by="dist_border",
                                     point_size=size, point_alpha=alpha)+
-            ggtitle(sample_id) + .centroid_image_theme() + coord_fixed()
+            ggplot2::ggtitle(sample_id) + .centroid_image_theme() +
+            ggplot2::coord_fixed()
 
         ggp <- cowplot::plot_grid(ggp, ggp2, ggp3, ncol = 2)
     } else {
@@ -591,7 +543,8 @@ plotQCscoreTerms <- function(spe,
                                            y=spatialCoordsNames(spe)[2],
                                            colour_by="log2CountArea",
                                            point_size=size, point_alpha=alpha)+
-            ggtitle(sample_id)+ .centroid_image_theme() + coord_fixed()
+            ggplot2::ggtitle(sample_id)+ .centroid_image_theme() +
+            ggplot2::coord_fixed()
     }
 
     return(ggp)
@@ -620,8 +573,10 @@ plotQCscoreTerms <- function(spe,
 #' @return A panel with multiple plots showing flagged cells for different
 #' variables.
 #'
-#' @importFrom dplyr
-#' @importFrom ggplot2 cowplot
+#' @importFrom dplyr case_when
+#' @importFrom ggplot2 ggplot geom_sf aes scale_fill_manual scale_color_manual
+#' @importFrom ggplot2 ggtitle theme
+#' @importFrom cowplot get_legend plot_grid
 #' @export
 #'
 #' @examples
@@ -642,7 +597,7 @@ FirstFilterPlot <- function(spe, fov = unique(spe$fov), theme = c("light", "dark
                                                     "ctrl/total ratio > 0.1",
                                                 TRUE ~ "unflagged")
 
-    spe$polygons$dapi_outlier_color <- case_when(spe$Mean.DAPI > round(attr(
+    spe$polygons$dapi_outlier_color <- dplyr::case_when(spe$Mean.DAPI > round(attr(
         spe$Mean.DAPI_outlier_mc, "thresholds")[2],2)
         ~ "> DAPI higher thr.",
         spe$Mean.DAPI < round(attr(
@@ -659,14 +614,14 @@ FirstFilterPlot <- function(spe, fov = unique(spe$fov), theme = c("light", "dark
     if(custom == TRUE){
         stopifnot("cust_Area_um_outlier_mc" %in% names(colData(spe)))
 
-        spe$polygons$area_outlier_color <- case_when(spe$cust_Area_um > round(attr(
+        spe$polygons$area_outlier_color <- dplyr::case_when(spe$cust_Area_um > round(attr(
             spe$cust_Area_um_outlier_mc, "thresholds")[2], 2)
             ~ "> area um higher thr.",
             spe$cust_Area_um < round(attr(
                 spe$cust_Area_um_outlier_mc, "thresholds")[1], 2)
             ~ "< area um lower thr.", TRUE ~ "unflagged")
 
-        spe$polygons$collapsed_color <- case_when(spe$is_ctrl_tot_outlier == TRUE ~
+        spe$polygons$collapsed_color <- dplyr::case_when(spe$is_ctrl_tot_outlier == TRUE ~
                                                       "ctrl/total ratio > 0.1",
                                                   spe$cust_Area_um > round(attr(
                                                       spe$cust_Area_um_outlier_mc,
@@ -688,7 +643,7 @@ FirstFilterPlot <- function(spe, fov = unique(spe$fov), theme = c("light", "dark
 
     }else{
 
-        spe$polygons$area_outlier_color <- case_when(spe$Area_um > round(attr(
+        spe$polygons$area_outlier_color <- dplyr::case_when(spe$Area_um > round(attr(
             spe$Area_um_outlier_mc, "thresholds")[2], 2)
             ~ "> area um higher thr.",
             spe$Area_um < round(attr(
@@ -718,55 +673,55 @@ FirstFilterPlot <- function(spe, fov = unique(spe$fov), theme = c("light", "dark
     }
 
 
-    ggp1 <- ggplot() +
-        geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
-                aes(fill=fixed_flags_color, color = fixed_flags_color),
+    ggp1 <- ggplot2::ggplot() +
+        ggplo2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
+                ggplot2::aes(fill=fixed_flags_color, color = fixed_flags_color),
                 lwd = 0, show.legend = "polygon") +
-        scale_fill_manual(values = outlier_palette)+
-        scale_color_manual(values = outlier_palette)
+        ggplot2::scale_fill_manual(values = outlier_palette)+
+        ggplot2::scale_color_manual(values = outlier_palette)
 
-    ggp2 <- ggplot() +
-        geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
-                aes(fill=area_outlier_color, color = area_outlier_color),lwd = 0,
+    ggp2 <- ggplot2::ggplot() +
+        ggplot2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
+                ggplot2::aes(fill=area_outlier_color, color = area_outlier_color),lwd = 0,
                 show.legend = "polygon") +
-        scale_fill_manual(values = outlier_palette)+
-        scale_color_manual(values = outlier_palette)
+        ggplot2::scale_fill_manual(values = outlier_palette)+
+        ggplot2::scale_color_manual(values = outlier_palette)
 
-    ggp3 <- ggplot() +
-        geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
-                aes(fill=dapi_outlier_color, color = dapi_outlier_color),lwd = 0,
+    ggp3 <- ggplot2::ggplot() +
+        ggplot2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
+                ggplot2::aes(fill=dapi_outlier_color, color = dapi_outlier_color),lwd = 0,
                 show.legend = "polygon") +
-        scale_fill_manual(values = outlier_palette)+
-        scale_color_manual(values = outlier_palette)
+        ggplot2::scale_fill_manual(values = outlier_palette)+
+        ggplot2::scale_color_manual(values = outlier_palette)
 
-    legp <- ggplot() +
-        geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
-                aes(fill = collapsed_color, color = collapsed_color), lwd = 0,
+    legp <- ggplot2::ggplot() +
+        ggplot2::geom_sf(data=spe$polygons[spe$polygons$fov%in%fov,],
+                ggplo2::aes(fill = collapsed_color, color = collapsed_color), lwd = 0,
                 show.legend = "polygon") +
-        scale_fill_manual(values = outlier_palette)+
-        scale_color_manual(values = outlier_palette)+theme(legend.title = element_blank())
+        ggplot2::scale_fill_manual(values = outlier_palette)+
+        ggplot2::scale_color_manual(values = outlier_palette)+theme(legend.title = element_blank())
 
     if(theme=="light"){
-        ggp1 <- ggp1 + .light_theme() + ggtitle("Control counts ratio") +
-            theme(legend.position="none")
-        ggp2 <- ggp2 + .light_theme() + ggtitle("Area in um") +
-            theme(legend.position="none")
-        ggp3 <- ggp3 + .light_theme() + ggtitle("Mean DAPI") +
-            theme(legend.position="none")
+        ggp1 <- ggp1 + .light_theme() + ggplo2::ggtitle("Control counts ratio") +
+            ggplo2::theme(legend.position="none")
+        ggp2 <- ggp2 + .light_theme() + ggplot2::ggtitle("Area in um") +
+            ggplot2::theme(legend.position="none")
+        ggp3 <- ggp3 + .light_theme() + ggplot2::ggtitle("Mean DAPI") +
+            ggplot2::theme(legend.position="none")
         legp <- legp + .light_theme()
         ggp4 <- cowplot::get_legend(legp)
-        plot_grid(ggp1, ggp2, ggp3, ggp4, ncol =2)
+        cowplot::plot_grid(ggp1, ggp2, ggp3, ggp4, ncol =2)
 
     }else{
-        ggp1 <- ggp1 + .dark_theme() + ggtitle("Control counts ratio") +
-            theme(legend.position="none")
-        ggp2 <- ggp2 + .dark_theme() + ggtitle("Area in um") +
-            theme(legend.position="none")
-        ggp3 <- ggp3 + .dark_theme() + ggtitle("Mean DAPI") +
-            theme(legend.position="none")
+        ggp1 <- ggp1 + .dark_theme() + ggplot2::ggtitle("Control counts ratio") +
+            ggplot2::theme(legend.position="none")
+        ggp2 <- ggp2 + .dark_theme() + ggplot2::ggtitle("Area in um") +
+            ggplot2::theme(legend.position="none")
+        ggp3 <- ggp3 + .dark_theme() + ggplot2::ggtitle("Mean DAPI") +
+            ggplot2::theme(legend.position="none")
         legp <- legp + .dark_theme()
         ggp4 <- cowplot::get_legend(legp)
-        plot_grid(ggp1, ggp2, ggp3, ggp4, ncol =2) +
+        cowplot::plot_grid(ggp1, ggp2, ggp3, ggp4, ncol =2) +
             theme(panel.background=element_rect(fill="black"))
     }
 
