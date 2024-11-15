@@ -35,6 +35,7 @@
 #' @importFrom data.table fread merge.data.table
 #' @importFrom SpatialExperiment SpatialExperiment
 #' @importFrom S4Vectors DataFrame
+#' @importFrom dplyr mutate
 #' @export
 #'
 #' @examples
