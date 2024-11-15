@@ -31,10 +31,11 @@
 #' @example
 #' # TBD
 spatialPerCellQC <- function(spe, micronConvFact=0.12,
-    negProbList=c("NegPrb", "Negative", "SystemControl", # CosMx
-        "NegControlProbe", "NegControlCodeWord", "UnassignedCodeWord", # Xenium
-        "Blank" # MERFISH
-        ))
+                             negProbList=c("NegPrb", "Negative", "SystemControl", # CosMx
+                                           "Ms IgG1", "Rb IgG", # CosMx Protein
+                                           "NegControlProbe", "NegControlCodeWord", "UnassignedCodeWord", # Xenium
+                                           "Blank" # MERFISH
+                             ))
 {
     ## CHECK EXISTENCE OF POLYGONS/AREAS ETC -> create function for metrics creation
     stopifnot(is(object=spe, "SpatialExperiment"))
@@ -46,15 +47,13 @@ spatialPerCellQC <- function(spe, micronConvFact=0.12,
 
     spe <- addPerCellQC(spe, subsets=idxlist)
     idx <- grep("^subsets_.*_sum$", colnames(colData(spe)))
-    npc = npd = 0
+
     if ( length(idx) !=0 )
     {
         ## TO TEST -> BENEDETTA
-        # meglio dataframe, perché rowsums non funziona -> ?
-        npc <- rowSums(as.matrix(colData(spe)[ , idx, drop=FALSE])) #sum
+        npc <- rowSums(as.matrix(colData(spe)[ , idx, drop=FALSE])) # meglio dataframe, perché rowsums non funziona
         ## getting detected probes as the column suddenly after the sum column
-        ## # not robust at all! the +1 is not a really good choice
-        npd <- rowSums(as.matrix(colData(spe)[ , idx+1, drop=FALSE])) #detected
+        npd <- rowSums(as.matrix(colData(spe)[ , idx+1, drop=FALSE])) # not robust at all!
     }
 
     spe$control_sum <- npc
@@ -62,11 +61,8 @@ spatialPerCellQC <- function(spe, micronConvFact=0.12,
     spe$target_sum <- spe$sum - npc
     spe$target_detected <- spe$detected - npd
 
-    if(!all(spatialCoordsNames(spe) %in% names(colData(spe))))
-    {
-        #### CHANGE SPE constructor WITH COORDINATES IN COLDATA #########
-        colData(spe) <- cbind.DataFrame(colData(spe), spatialCoords(spe))
-    }
+    #### CHANGE SPE constructor WITH COORDINATES IN COLDATA #########
+    colData(spe) <- cbind.DataFrame(colData(spe), spatialCoords(spe))
 
     if(metadata(spe)$technology == "Nanostring_CosMx")
     {
@@ -74,7 +70,6 @@ spatialPerCellQC <- function(spe, micronConvFact=0.12,
         colnames(spnc) <- gsub("px", "um", spatialCoordsNames(spe))
         colData(spe) <- cbind.DataFrame(colData(spe), spnc)
         spe$Area_um <- spe$Area * (micronConvFact^2)
-        spe <- computeBorderDistanceCosMx(spe)
     }
 
     #### compute AspectRatio for other technologies ####
@@ -83,13 +78,17 @@ spatialPerCellQC <- function(spe, micronConvFact=0.12,
         spe$log2AspectRatio <- log2(spe$AspectRatio)
     } else {
         warning(paste0("Missing aspect ratio in colData...\n",
-                   "NB: This could lead to additional warnings or errors.\n",
-                   "Missing AspectRatio can be computed by loading polygons."))
+                       "NB: This could lead to additional warnings or errors.\n",
+                       "Missing AspectRatio can be computed by loading polygons."))
     }
 
     spe$ctrl_total_ratio <- spe$control_sum/spe$total
     spe$ctrl_total_ratio[which(is.na(spe$ctrl_total_ratio))] <- 0
     spe$log2CountArea <- log2(spe$sum/spe$Area_um)
+
+    message("Removing ", dim(spe[,spe$sum==0])[2], " cells, they have 0 counts")
+    spe <- spe[,!spe$sum==0]
+
     return(spe)
 }
 
@@ -116,18 +115,19 @@ spatialPerCellQC <- function(spe, micronConvFact=0.12,
 #' @example
 #' # TBD
 computeBorderDistanceCosMx <- function(spe,
-                                    xwindim=metadata(spe)$fov_dim[["xdim"]],
-                                    ywindim=metadata(spe)$fov_dim[["ydim"]])
+                                       xwindim=metadata(spe)$fov_dim[["xdim"]],
+                                       ywindim=metadata(spe)$fov_dim[["ydim"]])
 {
     stopifnot(is(spe, "SpatialExperiment"))
 
     cd <- colData(spe)
     cdf <- left_join(as.data.frame(cd), metadata(spe)$fov_positions, by="fov")
     spcn <- spatialCoordsNames(spe)
-    fovpn <- colnames(metadata(spe)$fov_positions)[c(2:3)]
+    fovpn <- colnames(metadata(spe)$fov_positions)[colnames(
+        metadata(spe)$fov_positions)%in%c("x_global_px", "y_global_px")]
 
     cd$dist_border_x <- pmin(cdf[,spcn[1]] - cdf[,fovpn[1]],
-                            (cdf[,fovpn[1]] + xwindim) - cdf[,spcn[1]])
+                             (cdf[,fovpn[1]] + xwindim) - cdf[,spcn[1]])
 
     cd$dist_border_y <- pmin(cdf[,spcn[2]] - cdf[,fovpn[2]],
                              (cdf[,fovpn[2]] + ywindim) - cdf[,spcn[2]])
@@ -139,12 +139,13 @@ computeBorderDistanceCosMx <- function(spe,
 
 #' computeQCScore
 #' @description
-#' Compute for each cell a flag score based on the target_counts, area in micron
+#' Compute for each cell a quality score based on the target counts, area in micron
 #' and log2 of the aspect ratio.
 #'
 #' @param spe a SpatialExperiment object with target_counts, area in micron
 #' and log2 of the aspect ratio in the `colData`, tipically computed with
 #' \link{spatialPerCellQC}
+#' @param custom a boolean to set if you are using custom polygons
 #'
 #' @return a `SpatialExperiment` object with a `flag_score` stored in
 #' the `colData`.
@@ -152,33 +153,49 @@ computeBorderDistanceCosMx <- function(spe,
 #'
 #' @examples
 #' # TBD
-computeQCScore <- function(spe, a=1, b=1)#0.3, b=0.8)
+computeQCScore <- function(spe, a=1, b=1, custom = FALSE)#0.3, b=0.8)
 {
     stopifnot(is(spe, "SpatialExperiment"))
     cd <- colData(spe)
+
     if(!all(c("target_sum", "log2CountArea", "log2AspectRatio") %in% colnames(cd)))
     {
         stop("One of target_sum, Area_um, log2AspectRatio is missing, ",
-        "did you run spatialPerCellQC?")
+             "did you run spatialPerCellQC?")
     }
     # spe$log2CountArea <- log2(spe$target_sum/spe$Area_um)
     if (metadata(spe)$technology=="Nanostring_CosMx")
     {
-        if(!("dist_border" %in% names(colData(spe))))
+        spe <- computeBorderDistanceCosMx(spe)
+
+        if(custom == TRUE)
         {
-            spe <- computeBorderDistanceCosMx(spe)
+            if(!all(c("target_sum", "cust_log2CountArea",
+                      "cust_log2AspectRatio") %in% colnames(cd)))
+            {
+                stop("One of target_sum, cust_log2CountArea, cust_log2AspectRatio
+                is missing, did you run custom customPolyMetrics?")
+            }
+            qs <- 1 / (1 + exp(-a * spe$cust_log2CountArea +
+                                   b * abs(spe$cust_log2AspectRatio) *
+                                   as.numeric(spe$dist_border < 50)))
+        } else {
+
+            qs <- 1 / (1 + exp(-a * spe$log2CountArea +
+                                   b * abs(spe$log2AspectRatio) *
+                                   as.numeric(spe$dist_border < 50)))
         }
-        fs <- 1 / (1 + exp(-a * spe$log2CountArea +
-                                           b * abs(spe$log2AspectRatio) *
-                                           as.numeric(spe$dist_border < 50)))
     } else {
-        fs <- 1 / (1 + exp(-a * spe$log2CountArea +
-                                           b * abs(spe$log2AspectRatio)))
+        qs <- 1 / (1 + exp(-a * spe$log2CountArea +
+                               b * abs(spe$log2AspectRatio)))
     }
-    spe$flag_score <- fs
-    # spe$flag_score <- 1/(1 + exp(-a*spe$target_sum/spe$Area_um + b*abs(spe$log2AspectRatio)))
+
+    spe$quality_score <- qs
+    # spe$quality_score <- 1/(1 + exp(-a*spe$target_sum/spe$Area_um +
+    #b*abs(spe$log2AspectRatio)))
     return(spe)
 }
+
 
 
 #' computeSpatialOutlier
@@ -284,18 +301,14 @@ computeSpatialOutlier <- function(spe, compute_by=NULL,
     return(spe)
 }
 
-#' computeFilterFlags
+#' computeFixedFlags
 #' @description
-#' Compute Filter Flags for SpatialExperiment
+#' Compute Flagged cells using fixed thresholds for SpatialExperiment
 #'
 #' This function calculates various flags to identify outliers in a
 #' `SpatialExperiment` object based on quality control metrics.
 #'
 #' @param spe A `SpatialExperiment` object with spatial transcriptomics data.
-#' @param fs_threshold A numeric value for the threshold of `flag_score` to
-#' identify outliers. Default is `0.5`.
-#' @param use_fs_quantiles A logical value indicating whether to use quantiles
-#' for the `flag_score` threshold. Default is `FALSE`.
 #' @param total_threshold A numeric value for the threshold of total counts to
 #' identify cells with zero counts. Default is `0`.
 #' @param ctrl_tot_ratio_threshold A numeric value for the threshold of
@@ -304,38 +317,229 @@ computeSpatialOutlier <- function(spe, compute_by=NULL,
 #' @return The `SpatialExperiment` object with added filter flags in `colData`.
 #'
 #' @details The function flags cells based on zero counts, control-to-total
-#' ratio, and `flag_score` to identify potential outliers. It also combines
+#' ratio, and `quality_score` to identify potential outliers. It also combines
 #' these flags into a single filter flag.
 #'
 #' @importFrom SummarizedExperiment colData
 #' @export
 #' @examples
 #' # TBD
-computeFilterFlags <- function(spe, fs_threshold=0.5,
-                        use_fs_quantiles=FALSE,
-                        total_threshold=0,
-                        ctrl_tot_ratio_threshold=0.1)
+computeFixedFlags <- function(spe,
+                              total_threshold=0,
+                              ctrl_tot_ratio_threshold=0.1)
 {
     stopifnot(is(spe, "SpatialExperiment"))
-    stopifnot("flag_score" %in% names(colData(spe)))
     stopifnot("total" %in% names(colData(spe)))
     stopifnot("ctrl_total_ratio" %in% names(colData(spe)))
 
     spe$is_zero_counts <- ifelse(spe$total == total_threshold, TRUE, FALSE)
     #flagging cells with probe counts on total counts ratio > 0.1
     spe$is_ctrl_tot_outlier <- ifelse(spe$ctrl_total_ratio >
-                                ctrl_tot_ratio_threshold, TRUE, FALSE)
-    if(use_fs_quantiles)
-    {
-        spe$is_fscore_outlier <- ifelse(spe$flag_score <
-                                quantile(spe$flag_score, probs=fs_threshold),
-                                TRUE, FALSE)
-    } else {
-        spe$is_fscore_outlier <- spe$flag_score < fs_threshold
+                                          ctrl_tot_ratio_threshold, TRUE, FALSE)
+
+    spe$fixed_filter_out <- (spe$is_ctrl_tot_outlier &
+                                 spe$is_zero_counts)
+    return(spe)
+}
+
+#' qscoreOpt
+#' @description
+#' Compute automatically weights for quality score through glm training
+#'
+#' This function optimizes quality score by computing a glm to determine weights
+#' for the quality score formula after selecting a training set from the
+#' `SpatialExperiment` object.
+#'
+#' @param spe A `SpatialExperiment` object with spatial transcriptomics data.
+#' @param plot a boolean to set to TRUE if you want to see the glm plot
+#' @param custom a boolean value to set to TRUE if you are using custom polygons
+#'
+#' @return The `SpatialExperiment` object with added filter flags in `colData`.
+#'
+#' @details
+#'
+#' @importFrom SummarizedExperiment colData
+#' @importFrom dplyr ggplot2
+#' @export
+#' @examples
+#' # TBD
+
+qscoreOpt <- function(spe = spe, plot = FALSE, custom = FALSE){
+
+    if(custom==TRUE){
+        train_df1 <- data.frame(colData(spe)) |> filter (is_ctrl_tot_outlier |
+                     cust_Area_um_outlier_mc | Mean.DAPI_outlier_mc) |>
+            mutate(qscore_train = 0)
+
+        message(paste0("Chosen low quality examples: ", dim(train_df1)[1]))
+
+        train_df2 <- data.frame(colData(spe)) |> filter(
+            (cust_log2AspectRatio > summary(cust_log2AspectRatio)[2] &
+                 cust_log2AspectRatio < summary(cust_log2AspectRatio)[5]) |
+                (cust_log2CountArea > summary(cust_log2CountArea)[2] &
+                 cust_log2CountArea >summary(cust_log2CountArea)[5]) |
+                dist_border > 50) |>
+            mutate(qscore_train = 1) |> sample_n(dim(train_df1)[1])
+
+        train_df <- train_df1 %>%
+            mutate(rn = data.table::rowid(cell_id)) %>%
+            full_join(train_df2 %>%
+                          mutate(rn = data.table::rowid(cell_id))) %>%
+            select(-rn)
+
+        model <- glm(qscore_train ~ cust_log2CountArea +
+                         I(abs(cust_log2AspectRatio) * as.numeric(dist_border<50)),
+                     family = binomial(link = "logit"), data = train_df)
+
+        quality_score_opt <- 1 / (1 + exp(-model$coef[1] - model$coef[2] *
+                                              spe$cust_log2CountArea - model$coef[3] *
+                                              abs(spe$cust_log2AspectRatio) *
+                                              as.numeric(spe$dist_border<50)))
+
+        message(paste0("Computing optimized quality score with coefficients: ",
+                       round(model$coef[1],2), ", ", round(model$coef[2],2),
+                       ", ", round(model$coef[3],2)))
+
+        if(any(is.na(quality_score_opt))){
+            message(paste0(
+                table(
+                    is.na(quality_score_opt))[["TRUE"]]," NA quality scores found.
+      Subsetting spe to keep only cells not NA for quality score"))
+            spe$quality_score_opt <- quality_score_opt
+            spe <- spe[,!is.na(spe$quality_score_opt)]
+        }else{
+            spe$quality_score_opt <- quality_score_opt
+        }
+
+        if(plot == TRUE){
+            print(ggplot(train_df, aes(x = cust_log2CountArea +
+                                           abs(cust_log2AspectRatio) *
+                                           as.numeric(dist_border<50),
+                                       y = qscore_train)) +
+                      geom_point(col = "blue4") +
+                      stat_smooth(method = "glm", se = FALSE, method.args =
+                                      list(family=binomial), color = "pink2") +
+                      geom_hline(yintercept = c(0, 1), color = "lightblue") +
+                      theme_bw() + ylab("Training quality score") +
+                      xlab("log2(count/area) + |aspectRatio| * distance from border index"))
+            return(spe)
+        }
+    }else{
+        train_df1 <- data.frame(colData(spe)) |> filter (is_ctrl_tot_outlier |
+                     Area_um_outlier_mc | Mean.DAPI_outlier_mc) |>
+            mutate(qscore_train = 0)
+
+        message(paste0("Chosen low quality examples: ", dim(train_df1)[1]))
+
+        train_df2 <- data.frame(colData(spe)) |> filter(
+            (log2AspectRatio > summary(log2AspectRatio)[2] & log2AspectRatio <
+                 summary(log2AspectRatio)[5]) |
+                (log2CountArea > summary(log2CountArea)[2] & log2CountArea >
+                     summary(log2CountArea)[5]) |
+                dist_border > 50) |>
+            mutate(qscore_train = 1) |> sample_n(dim(train_df1)[1])
+
+        train_df <- train_df1 %>%
+            mutate(rn = data.table::rowid(cell_id)) %>%
+            full_join(train_df2 %>%
+                          mutate(rn = data.table::rowid(cell_id))) %>%
+            select(-rn)
+
+        model <- glm(qscore_train ~ log2CountArea + I(abs(log2AspectRatio) *
+                     as.numeric(dist_border<50)),
+                     family = binomial(link = "logit"), data = train_df)
+
+        quality_score_opt <- 1 / (1 + exp(-model$coef[1] - model$coef[2] *
+                                              spe$log2CountArea - model$coef[3] *
+                                              abs(spe$log2AspectRatio) *
+                                              as.numeric(spe$dist_border<50)))
+
+        message(paste0("Computing optimized quality score with coefficients: ",
+                       round(model$coef[1],2), ", ", round(model$coef[2],2),
+                       ", ", round(model$coef[3],2)))
+
+        if(any(is.na(quality_score_opt))){
+            message(paste0(
+                table(
+                    is.na(quality_score_opt))[["TRUE"]]," NA quality scores found.
+      Subsetting spe to keep only cells not NA for quality score"))
+            spe$quality_score_opt <- quality_score_opt
+            spe <- spe[,!is.na(spe$quality_score_opt)]
+        }else{
+            spe$quality_score_opt <- quality_score_opt
+        }
+
+        if(plot == TRUE){
+            print(ggplot(train_df, aes(x = log2CountArea + abs(log2AspectRatio) *
+                  as.numeric(dist_border<50), y = qscore_train)) +
+                      geom_point(col = "blue4") +
+                      stat_smooth(method = "glm", se = FALSE,
+                                  method.args = list(family=binomial),
+                                  color = "pink2") +
+                      geom_hline(yintercept = c(0, 1), color = "lightblue") +
+                      theme_bw() + ylab("Training quality score") +
+                      xlab("log2(count/area) + |aspectRatio| * distance from border index"))
+            return(spe)
+        }
     }
+    return(spe)
+}
 
-    spe$filter_out <- (spe$is_fscore_outlier & spe$is_ctrl_tot_outlier &
-                           spe$is_zero_counts)
+#' computeQscoreFlags
+#' @description
+#' Compute flagged cells based on a manually chosen threshold on quality score
+#'
+#' This function Compute flagged cells based on a manually chosen threshold on
+#' quality score stored in `SpatialExperiment` object.
+#'
+#' @param spe A `SpatialExperiment` object with spatial transcriptomics data.
+#' @param use_qs_quantiles a boolean. If TRUE uses the value specified in
+#' qs_threshold as a percentile
+#' @param opt a boolean value to set to TRUE if you want to compute flagged cells
+#' for optimized quality score
+#'
+#' @return The `SpatialExperiment` object with added filter flags in `colData`.
+#'
+#' @details
+#'
+#' @importFrom SummarizedExperiment colData
+#' @importFrom dplyr ggplot2
+#' @export
+#' @examples
+#' # TBD
+#'
+computeQscoreFlags <- function(spe, qs_threshold=0.5,
+                               use_qs_quantiles=FALSE,
+                               opt = FALSE)
+{
+    stopifnot(is(spe, "SpatialExperiment"))
+    stopifnot("quality_score" %in% names(colData(spe)))
 
+    if(use_qs_quantiles)
+    {
+        if(opt==TRUE){
+            spe$is_qscore_opt_outlier <- ifelse(spe$quality_score_opt <
+                                                    quantile(spe$quality_score_opt,
+                                                             probs=qs_threshold),
+                                                TRUE, FALSE)
+        }else{
+            spe$is_qscore_outlier <- ifelse(spe$quality_score <
+                                                quantile(spe$quality_score,
+                                                         probs=qs_threshold),
+                                            TRUE, FALSE)
+        }
+
+    } else {
+        if(opt==TRUE){
+            spe$is_qscore_opt_outlier <- spe$quality_score_opt < qs_threshold
+        } else {
+            spe$is_qscore_outlier <- spe$quality_score < qs_threshold
+        }
+    }
+    if(opt==TRUE){
+        spe$fixed_qscore_opt_out <- (spe$is_qscore_opt_outlier & spe$fixed_filter_out)
+    } else {
+        spe$fixed_qscore_out <- (spe$is_qscore_outlier & spe$fixed_filter_out)
+    }
     return(spe)
 }
