@@ -108,7 +108,7 @@ readCosmxSPE <- function(dirname,
         colnames(fov_positions)[fovccdx] <- gsub("_px", "_global_px",
                                                  colnames(fov_positions)[fovccdx])
     }
-    if(length(fovccdx)==0){
+    if(grep("x_mm", colnames(fov_positions))){
         fov_positions <- fov_positions |> dplyr::mutate(x_global_px = x_mm/0.12028*10^3, y_global_px =
                                                      (y_mm/0.12028*10^3) - 4256)
     }
