@@ -1,4 +1,4 @@
-![alt text](https://github.com/BenedettaBanzi/SpaceTrooper_BB/blob/devel/spacetrooper_logo.png)
+![alt text](https://github.com/BenedettaBanzi/SpaceTrooper_BB/blob/devel/SpaceTrooper_logo.png)
 # SpaceTrooper
 an R package for the preprocessing and quality control of imaging-based spatial transcriptomics data
 
