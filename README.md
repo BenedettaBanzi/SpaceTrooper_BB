@@ -1,6 +1,6 @@
+![alt text](https://github.com/BenedettaBanzi/SpaceTrooper_BB/blob/devel/spacetrooper_logo.png)
 # SpaceTrooper
 an R package for the preprocessing and quality control of imaging-based spatial transcriptomics data
-![alt text](https://github.com/BenedettaBanzi/SpaceTrooper_BB/blob/devel/spacetrooper_logo.png)
 
 ### Disclaimer
 This is still a development version. A lot of fixing is required, please be patient for any
@@ -12,6 +12,7 @@ Manuscript and quoting coming soon!
 To install the package, R must be at least 4.3.2.
 
 ### Installation
+```
 #First try to run the following either in R or in a virgin environment:
 remotes::install_github(repo="https://github.com/BenedettaBanzi/SpaceTrooper_BB", ref = "devel")
 
@@ -24,6 +25,7 @@ if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 BiocManager::install("scater")
+```
 
 #Then try to run again SpaceTrooper installation, now it should work fine.
 It should take a couple of minutes.
