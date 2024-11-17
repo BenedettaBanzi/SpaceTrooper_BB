@@ -1,7 +1,7 @@
 ---
-title: "10_29_SpaceTrooper_demo_DBKero_source_24_10"
+title: "11_15_SpaceTrooper_demo_DBKero"
 author: "Benedetta Banzi"
-date: "2024-10-28"
+date: "2024-11-15"
 output:
   html_document:
     toc: true
@@ -53,7 +53,7 @@ Setting directory: path to where all needed DBKero input files are stored. You c
 - Run5810_Case2-polygons.csv - cell polygons
 
 ```{r}
-dirname <- "/NAS06/work/Spatial_omics/DBKero/CosMx_Breast/CosMX_data_Case2"
+dirname <- "/Users/benedettabanzi/Documents/DBKero/CosMX_data_Case2"
 sample_name <- "CosMx_DBKero_BC"
 ```
 
@@ -194,9 +194,6 @@ Some new columns have been added by spatialPerCellQC:
 To make things simpler... make sure to have only one polygons file inside your data directory.
 
 ```{r}
-metadata(spe)$polygons <- NULL
-metadata(spe)$polygons <- "/NAS06/work/Spatial_omics/DBKero/CosMx_Breast/CosMX_data_Case2/Run5810_Case2-polygons.csv"
-
 polygons <- readPolygonsCosmx(polygonsFile=metadata(spe)$polygons, type="csv", keepMultiPol=TRUE, verbose=FALSE)
 
 spe <- addPolygonsToSPE(spe, polygons)
@@ -426,7 +423,9 @@ round(union_flagged/dim(spe)[2]*100, 2),"</center>"), padding = 1L)
 Scatter plot to view correlation of variables + density plot to view distribution of single variables.
 
 ```{r}
+# you have to install this first package
 library(ggpointdensity)
+# these are already included in SpaceTrooper
 library(ggpubr)
 library(cowplot)
 
