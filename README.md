@@ -21,7 +21,7 @@ remotes::install_github(repo="https://github.com/BenedettaBanzi/SpaceTrooper_BB"
 It is highly probable that it won't finish up because some dependencies' installation is a bit cumbersome.
 PLEASE, DON'T GET DISCOURAGED! Just look at the error message and jot down which packages were not successfully
 installed. Then install manually the packages either using BioCManager for Bioconductor packages, the standard 
-"install.package()" in R, or through conda or bioconda. For example:
+"install.packages()" in R, or through conda or bioconda. For example:
 ```
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
