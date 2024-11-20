@@ -28,7 +28,7 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install("scater")
 ```
-Then try to run again SpaceTrooper installation, now it should work fine and taking a couple of minutes.
+Then try to run again SpaceTrooper installation, now it should work fine and take a couple of minutes.
 
 ### Demo
 If you were able to install the package correctly, CONGRATULATIONS!!! 🎉🎉🎉
