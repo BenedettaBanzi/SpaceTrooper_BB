@@ -2,16 +2,16 @@
 % Please edit documentation in R/spatialQCPlots.R
 \name{plotMetricHist}
 \alias{plotMetricHist}
-\title{plotMetricHists}
+\title{plotMetricHist}
 \usage{
 plotMetricHist(
   spe,
   metric,
-  fill_color = "#69b3a2",
-  use_fences = NULL,
-  fences_colors = c(lower = "purple4", higher = "tomato"),
+  fillColor = "#c0c8cf",
+  useFences = NULL,
+  fencesColors = c(lower = "purple4", higher = "tomato"),
   bins = 30,
-  bin_width = NULL
+  binWidth = NULL
 )
 }
 \arguments{
@@ -21,21 +21,21 @@ data.}
 \item{metric}{A character string specifying the name of the metric
 (column in `colData(spe)`) to plot.}
 
-\item{fill_color}{A character string specifying the fill color of the
+\item{fillColor}{A character string specifying the fill color of the
 histogram bars. (Default is `"#69b3a2"`)}
 
-\item{use_fences}{A character string specifying the name of the column in
+\item{useFences}{A character string specifying the name of the column in
 `colData(spe)` that contains the fence thresholds (typically from an outlier
 filter). If `NULL`, no fences will be plotted. (Default is `NULL`)}
 
-\item{fences_colors}{A named character vector specifying the colors to use
+\item{fencesColors}{A named character vector specifying the colors to use
 for the lower and higher fences. The names should be `"lower"` and `"higher"`
 . (Default is `c("lower"="purple4", "higher"="tomato")`)}
 
 \item{bins}{An integer specifying the number of bins to use in the histogram.
 (Default is `30`)}
 
-\item{bin_width}{A numeric value specifying the width of the bins. If `NULL`,
+\item{binWidth}{A numeric value specifying the width of the bins. If `NULL`,
 the bin width will be automatically determined based on the `bins` parameter.
 (Default is `NULL`)}
 }
@@ -48,4 +48,9 @@ Object
 
 This function generates a histogram for a specified metric in a
 `SpatialExperiment` object.
+}
+\examples{
+example(readCosmxSPE)
+g <- plotMetricHist(spe, metric="Mean.DAPI")
+print(g)
 }

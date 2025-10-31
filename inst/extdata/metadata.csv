@@ -1,0 +1,5 @@
+"Genome","SourceType","SourceVersion","Coordinate_1_based","DataProvider","Maintainer","Title","Description","SourceUrl","Species","TaxonomyId","BiocVersion"
+NA,"FASTQ",NA,NA,NA,"Yixing E. Dong <estelladong729@gmail.com>","Xenium_small","10x Genomics Xenium mock .h5 count matrix file and cells.csv.gz file downsized from the human breast cancer replicate 1 in Janesick et al. (2023).","https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM7780153","Homo sapiens","9606","3.19"
+NA,"CSV",NA,NA,NA,"Dario Righelli <dario.righelli@gmail.com>","CosMx_DBKero_Tiny","Nanostring CosMx downsized human breast cancer dataset", "https://kero.hgc.jp/Breast_Cancer_Spatial.html","Homo sapiens","9606","3.20"
+NA,"CSV",NA,NA,NA,"Dario Righelli <dario.righelli@gmail.com>","Merfish_Tiny","Merfish downsized human uterine cancer dataset", "https://vizgen.com/data-release-program/","Homo sapiens","9606","3.20"
+NA,"HDF5",NA,NA,NA,"Dario Righelli <dario.righelli@gmail.com>","Merfish_polygons_h5","Merfish downsized Liver1 Slice1 cancer dataset", "https://vizgen.com/data-release-program/","Homo sapiens","9606","3.20"

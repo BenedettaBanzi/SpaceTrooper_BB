@@ -1,158 +1,139 @@
+#' readXeniumSPE
+#' @name readXeniumSPE
 #' @rdname readXeniumSPE
-#'
-#' @title Load data from a 10x Geonomics Xenium experiment
+#' @title Load data from a 10x Genomics Xenium experiment
 #'
 #' @description
-#' Creates a \code{\link{SpatialExperiment}} from the downloaded unzipped Xenium
-#' Output Bundle directory for 10x Genomics Xenium spatial gene expression data.
+#' Creates a [`SpatialExperiment`] from an unzipped Xenium Output Bundle
+#' directory containing spatial gene expression data.
 #'
-#' @param dirname a directory path to Xenium Output Bundle download that contains
-#' files of interest.
-#' @param sample_name
-#' @param type
-#' @param coord_names
-#' @param boundaries_type
-#' @param compute_missing_metrics
-#' @param keep_polygons logical indicating if to save the optionally loaded
-#' (to compute the missing metrics) polygons into the `colData`
-#' @param countsfilepattern
-#' @param metadatafpattern a filename pattern of the zipped .csv file that
-#' contains cell metadata and spatial coords. Default value is \code{"cells.csv.gz"}, and there is no
-#' need to change.
-#' @param polygonsfpattern a vector of two strings specify the spatial coord names.
-#' Default value is \code{c("x_centroid", "y_centroid")}, and there is no need to change.
+#' @param dirName `character(1)`
+#'   Path to a Xenium Output Bundle directory.
+#' @param sampleName `character(1)`
+#'   Sample identifier to assign to `sample_id`. Default: `"sample01"`.
+#' @param type `character(1)`
+#'   One of `"HDF5"` or `"sparse"`; method to read the feature matrix.
+#' @param coordNames `character(2)`
+#'   Names of X/Y spatial coordinate columns. Default:
+#'   `c("x_centroid", "y_centroid")`.
+#' @param boundariesType `character(1)`
+#'   One of `"parquet"` or `"csv"`; format of the polygon file.
+#' @param computeMissingMetrics `logical(1)`
+#'   If `TRUE`, compute area and aspect‐ratio from boundary polygons.
+#' @param keepPolygons `logical(1)`
+#'   If `TRUE`, append raw polygon geometries to `colData`.
+#' @param countsFilePattern `character(1)`
+#'   Pattern to locate the feature matrix file. Default:
+#'   `"cell_feature_matrix"`.
+#' @param metadataFPattern `character(1)`
+#'   Pattern to locate the cell metadata file. Default: `"cells"`.
+#' @param polygonsFPattern `character(1)`
+#'   Pattern to locate the cell boundaries file. Default:
+#'   `"cell_boundaries"`.
+#' @param polygonsCol `character(1)`
+#'   Name of the polygons column to add to `colData`. Default:
+#'   `"polygons"`.
+#' @param txPattern `character(1)`
+#'   Pattern (base filename, without extension) to locate the transcript file
+#'   (usually a `.parquet` file) from which to extract Field-Of-View (FOV)
+#'   information for each cell. Default: `"transcripts"`.
+#' @param addFOVs `logical(1)`
+#'   If `TRUE`, extract Field-Of-View (FOV) information from the transcript file
+#'   (as located by `txPattern`) and append it to cell metadata (`colData`).
+#'   Default: `FALSE`.
+
 #'
 #' @details
-#' # WHAT ABOUT THE OTHER PARAMETERS/FILES? WHAT ABOUT THE OUTS FOLDER(added)?
-#' The constructor assumes the downloaded unzipped Xenium Output Bundle has the
-#' following structure, with mandatory file of cells.csv.gz and either folder
-#' /cell_feature_matrix or .h5 file cell_feature_matrix.h5:
-#' Xenium_unzipped \cr
-#'    | - outs
-#'        | — cell_feature_matrix.h5 \cr
-#'        | — cell_feature_matrix \cr
-#'            | - barcodes.tsv.gz \cr
-#'            | - features.tsv.gz \cr
-#'            | - matrix.mtx.gz \cr
-#'        | — cells.csv.gz \cr
+#' Expects the unzipped bundle to contain an `outs/` folder with:
+#' - `cell_feature_matrix.h5` or `cell_feature_matrix/`
+#' - `cells.csv.gz`
 #'
-#' @return a \code{\link{SpatialExperiment}} object
+#' @return A [`SpatialExperiment`] object with assays, `colData`, spatial
+#'   coordinates, and `metadata$polygons` & `metadata$technology`.
 #'
-#' @author Estella Yixing Dong
+#' @author Dario Righelli, Benedetta Banzi
 #'
-#' @examples
-#' \dontrun{
-#' # Data download is from:
-#' # https://cf.10xgenomics.com/samples/xenium/1.0.2/Xenium_V1_FF_Mouse_Brain_
-#' # Coronal_Subset_CTX_HP/Xenium_V1_FF_Mouse_Brain_Coronal_Subset_CTX_HP_outs.zip
-#'
-#' xepath <- system.file(
-#'   file.path("extdata", "10xXenium"),
-#'   package = "SpatialExperiment")
-#'
-#' list.files(xepath)
-#'
-#' # read the count matrix .h5 file
-#' xe_spe <- readXeniumSPE(dirname = xepath,
-#'                         countfname = "cell_feature_matrix.h5",
-#'                         coordfpattern = "cells.csv.gz",
-#'                         coord_names = c("x_centroid", "y_centroid"))
-#'
-#' # or read the count matrix folder
-#' xe_spe <- readXeniumSPE(dirname = xepath,
-#'                         countfname = "cell_feature_matrix",
-#'                         coordfpattern = "cells.csv.gz",
-#'                         coord_names = c("x_centroid", "y_centroid"))
-#'
-#' # Subset to no control genes
-#' xe_spe <- xe_spe[rowData(xe_spe)$Type == "Gene Expression"]
-#' }
 #' @importFrom DropletUtils read10xCounts
 #' @importFrom data.table fread
 #' @importFrom SpatialExperiment SpatialExperiment
-readXeniumSPE <- function(dirname,
-                          sample_name="sample01",
-                          type=c("HDF5", "sparse"),
-                          coord_names=c("x_centroid", "y_centroid"),
-                          boundaries_type=c("parquet", "csv"),
-                          compute_missing_metrics=TRUE, keep_polygons=FALSE,
-                          countsfilepattern="cell_feature_matrix",
-                          metadatafpattern="cells",
-                          polygonsfpattern="cell_boundaries")
-{
-    stopifnot(file.exists(dirname))
-    type <- match.arg(type)
-    boundaries_type <- match.arg(boundaries_type)
+#' @importFrom SummarizedExperiment assays rowData
+#' @importFrom SpatialExperimentIO readXeniumSXE
+#' @export
+#' @examples
+#' xepath <- system.file(
+#'   "extdata", "Xenium_small", package = "SpaceTrooper"
+#' )
+#' (spe <- readXeniumSPE(
+#'   dirName = xepath,
+#'   keepPolygons = TRUE
+#' ))
+readXeniumSPE <- function(dirName, sampleName="sample01",
+    type=c("HDF5", "sparse"), coordNames=c("x_centroid", "y_centroid"),
+    boundariesType=c("parquet", "csv"), computeMissingMetrics=TRUE,
+    keepPolygons=FALSE, countsFilePattern="cell_feature_matrix",
+    metadataFPattern="cells.csv.gz", polygonsFPattern="cell_boundaries",
+    polygonsCol="polygons", txPattern="transcripts", addFOVs=FALSE) {
 
-    # add "outs/" directory if not already included
-    if(basename(dirname) != "outs")
-    {
-        dirbkup <- dirname
-        dirname <- file.path(dirname, "outs")
-        if (!file.exists(dirname))
-        {
-            dirname <- dirbkup
+    stopifnot(file.exists(dirName))
+    type <- match.arg(type)
+    boundariesType <- match.arg(boundariesType)
+    if(basename(dirName) != "outs") { # add "outs/" dir if not already included
+        dirbkup <- dirName
+        dirName <- file.path(dirName, "outs")
+        if (!file.exists(dirName)) {
+            dirName <- dirbkup
         } else {
             warning("automatically detected/added outs dir in the 10x filepath")
         }
     }
 
-    cfm <- paste0(countsfilepattern, switch(type, HDF5=".h5", ""))
-    counts <- file.path(dirname, cfm)
+    cfm <- paste0(countsFilePattern, switch(type, HDF5=".h5", ""))
+    spe <- SpatialExperimentIO::readXeniumSXE(dirName=dirName,
+            countMatPattern=cfm, metaDataPattern=metadataFPattern,
+            coordNames=coordNames, returnType="SPE", addExperimentXenium=FALSE,
+            altExps=NULL, addParquetPaths=FALSE)
+    spe$sample_id <- sampleName
+    rownames(colData(spe)) <- spe$cell_id
+    pex <- paste0(polygonsFPattern, switch(boundariesType, parquet=".parquet",
+                                                            csv=".csv.gz"))
+    polfile <- list.files(dirName, pex, full.names=TRUE)
 
-    metadata_file <- file.path(dirname, paste0(metadatafpattern, ".csv.gz"))
-    pex <- paste0(polygonsfpattern, switch(boundaries_type,
-                                            parquet=".parquet",
-                                            csv=".csv.gz"))
-    pol_file <- list.files(dirname, pex, full.names=TRUE)
-    stopifnot(all(file.exists(c(metadata_file, pol_file))))
-
-    # Count matrix + rowData
-    sce <- DropletUtils::read10xCounts(counts, col.names=TRUE)
-
-    # Spatial and colData
-    cd <- DataFrame(fread(metadata_file, header=TRUE))
-    rownames(cd) <- cd$cell_id
-
-    if ( dim(sce)[2] != dim(cd)[1] )
-    {
-        sce <- sce[, colnames(sce) %in% rownames(cd)]
-        cd <- cd[rownames(cd) %in% colnames(sce), ]
-    }
-    if (compute_missing_metrics)
-    {
+    if (computeMissingMetrics) {
         message("Computing missing metrics, this could take some time...")
-        cd <- computeMissingMetricsXenium(pol_file, cd, keep_polygons)
+        cd <- computeMissingMetricsXenium(polfile, colData(spe), keepPolygons,
+                                        polygonsCol)
     }
-    # construct 'SpatialExperiment'
-    spe <- SpatialExperiment::SpatialExperiment(
-        sample_id=sample_name,
-        assays = assays(sce),
-        rowData = rowData(sce),
-        colData = cd,
-        spatialCoordsNames = coord_names,
-        metadata=list(polygons=pol_file, technology="10X_Xenium")
-    )
+    if (addFOVs) {
+        cd <- .addFovFromTx(file.path(dirName, paste0(txPattern, ".parquet")),
+                    cd)
+    }
+
+    colData(spe) <- cd
+    metadata(spe) <- list(polygons=polfile, technology="10X_Xenium")
     return(spe)
 }
 
 #' computeMissingMetricsXenium
-#' @description
+#' @name computeMissingMetricsXenium
+#' @rdname computeMissingMetricsXenium
 #'
+#' @description
 #' Compute Missing Metrics for Xenium Data
 #'
 #' This function computes missing metrics, such as the aspect ratio, from
 #' polygon data in a Xenium dataset and optionally appends the polygon data to
 #' the resulting `colData`.
 #'
-#' @param pol_file A character string specifying the file path to the polygon
+#' @param polFile A character string specifying the file path to the polygon
 #' data.
-#' @param coldata A `DataFrame` containing the `colData` for the Xenium dataset.
-#' @param keep_polygons A logical value indicating whether to keep the polygon
+#' @param colData A `DataFrame` containing the `colData` for the Xenium dataset.
+#' @param keepPolygons A logical value indicating whether to keep the polygon
 #' data in the resulting `colData`. Default is `FALSE`.
+#' @param polygonsCol character indicating the name of the polygons column to
+#' add into the colData (default is `polygons`).
 #'
 #' @return A `DataFrame` containing the updated `colData` with computed metrics.
-#' If `keep_polygons` is `TRUE`, the polygon data is also included.
+#' If `keepPolygons` is `TRUE`, the polygon data is also included.
 #'
 #' @details The function reads the polygon data from the specified file,
 #' computes the aspect ratio for each polygon, and merges these metrics with
@@ -163,17 +144,55 @@ readXeniumSPE <- function(dirname,
 #' @export
 #'
 #' @examples
-#' # Assuming 'pol_file' is the path to the polygon file and 'coldata' is a
-#' # DataFrame:
-#' #updated_cd <- computeMissingMetricsXenium(pol_file = "path/to/polygons",
-#' #                                          coldata = coldata,
-#' #                                          keep_polygons = TRUE)
-computeMissingMetricsXenium <- function(pol_file, coldata, keep_polygons=FALSE)
+#' example(readXeniumSPE)
+#' colData(spe) <- computeMissingMetricsXenium(metadata(spe)$polygons,
+#'     colData(spe), keepPolygons=TRUE)
+computeMissingMetricsXenium <- function(polFile, colData, keepPolygons=FALSE,
+                                polygonsCol="polygons")
 {
-    stopifnot(dir.exists(pol_file))
-    polygons <- readPolygonsXenium(pol_file, keepMultiPol=TRUE)
-    cd <- computeAspectRatioFromPolygons(polygons, coldata)
-    if(keep_polygons) cd <- cbind.DataFrame(cd, polygons)
+    stopifnot(file.exists(polFile))
+    polygons <- readPolygonsXenium(polFile, keepMultiPol=TRUE)
+    cd <- colData
+    cd$AspectRatio <- computeAspectRatioFromPolygons(polygons)
+    if(keepPolygons) cd <- .addPolygonsToCD(cd, polygons, polygonsCol)
     return(cd)
+}
+
+#' .addFovFromTx
+#' @name dot-addFovFromTx
+#' @rdname dot-addFovFromTx
+#'
+#' @description
+#' Add FOV information from transcript file to cell metadata.
+#'
+#' This function retrieves FOV information from transcript file and appends
+#' the data to the resulting `colData`.
+#'
+#' @param txFile `character(1)` path to a Xenium Output tx file.
+#' @param colData A `DataFrame` containing the `colData` for the Xenium dataset.
+#'
+#' @return A `DataFrame` containing the updated `colData` with FOV information.
+#'
+#' @details The function reads the transcript file then groups it by cell_id
+#' and merges the FOV information to the cell metadata in `colData`. Only
+#' parquet file is supported for this operation
+#'
+#' @importFrom S4Vectors cbind.DataFrame
+#' @importFrom arrow read_parquet
+#' @importFrom dplyr group_by select distinct left_join
+#' @keywords internal
+#'
+.addFovFromTx <- function(txFile, colData) {
+    stopifnot(file.exists(txFile))
+    df <- data.frame(colData)
+    tx <- arrow::read_parquet(txFile)
+    if (!"fov_name" %in% colnames(tx)) {
+        stop("No fov_name column was found in tx file. \r\n",
+            "Rerun readXeniumSPE without adding FOV information.")}
+    g_tx <- group_by(tx, cell_id) |> select(cell_id, fov=fov_name) |>
+        distinct(cell_id, .keep_all = TRUE)
+    df <- left_join(df, g_tx, by="cell_id")
+    colData$fov <- df$fov
+    return(colData)
 }
 

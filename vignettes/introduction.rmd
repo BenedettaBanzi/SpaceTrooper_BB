@@ -1,0 +1,368 @@
+---
+title: "Spatial Data Quality Control with SpaceTrooper Package"
+author: "Dario Righelli"
+date: "`r BiocStyle::doc_date()`"
+output:
+    BiocStyle::html_document:
+        toc: true
+        toc_float: true
+vignette: >
+    %\VignetteIndexEntry{Spatial Data Quality Control with SpaceTrooper Package}
+    %\VignetteEncoding{UTF-8}
+    %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+# Set chunk options: suppress echo, messages, and warnings in code output
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+This vignette introduces the `SpaceTrooper` package for preprocessing and 
+quality control of imaging-based spatial omics,
+from platforms like **Xenium**, **Merfish**, and **CosMx**. We cover data
+loading, quality control, and results visualization.
+
+# Installation
+
+To install `SpaceTrooper`, use the following commands:
+
+```{r install, eval=FALSE}
+# Install BiocManager if not already installed, then install SpaceTrooper
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("SpaceTrooper")
+```
+
+# Data Loading
+
+In this section, we load data from various platforms using the package's
+functions. The goal is to provide a uniform `SpatialExperiment` object across
+all technologies, allowing for consistent QC analysis.
+
+The functions in `SpaceTrooper` compute missing metrics as needed and allow
+for the inclusion of polygons with the `keep_polygons` argument. This stores
+polygons in the `colData` of the `SpatialExperiment`.
+We suggest to use the `keep_polygons` argument for technologies like 
+**Xenium** and **Merfish/Merscope** because we already load the polygons to 
+compute missing metrics in these cases.
+
+Note that when loading data with `readXeniumSPE` in HDF5 format, this creates a 
+`DelayedArray` count assay in the `SpatialExperiment`, which could lead to some 
+issues in downstream analysis, in case this data structure is not supported
+by the used package.
+
+```{r load-data}
+library(SpatialExperiment)
+# Load the SpaceTrooper library
+library(SpaceTrooper)
+
+# Load Xenium data into a Spatial Experiment object (SPE)
+xeniumFolder <- system.file( "extdata", "Xenium_small", package="SpaceTrooper")
+(xen <- readXeniumSPE(xeniumFolder, computeMissingMetrics=TRUE,
+                        keepPolygons=TRUE))
+colData(xen)
+# Load Merfish data into an SPE with parquet boundaries
+merscopeFolder <- system.file("extdata", "Merfish_Tiny", package="SpaceTrooper")
+(mer <- readMerfishSPE(merscopeFolder, boundariesType="parquet",
+                        computeMissingMetrics=TRUE, keepPolygons=TRUE))
+colData(mer)
+```
+
+Despite main differences across the technologies provided data, we can see that 
+all the technologies have the same mandatory `cell_id` and `AspectRatio` 
+columns.
+
+# Data Analysis based on CosMx
+
+The package offers several functions for spatial data analysis, including
+quality control and visualization.
+
+This tutorial focuses on CosMx data, which provides Fields of View (FoVs)
+with cell identifiers. Note that FoVs are unique to CosMx and are not
+available for other technologies like Xenium and Merfish/Merscope.
+
+For CosMx data, you don't need to `keep_polygons` initially because the
+metrics can be computed without them. Polygons can be loaded later if needed.
+
+```{r cosmx-analysis}
+# Reload CosMx data with sample name and without polygons
+cosmxFolder <- system.file(file.path("extdata", "CosMx_DBKero_Tiny"), 
+                        package="SpaceTrooper")
+spe <- readCosmxSPE(cosmxFolder, sampleName="DBKero_CosMx")
+## a custom function for the labels of this dataset
+source(system.file(file.path("scripts", "labelsfunct.R"), 
+                    package="SpaceTrooper"))
+spe <- addLabelsDBKero(spe)
+
+spe
+```
+
+# Field of Views (FOVs) Visualization
+
+The `plotCellsFovs` function shows a map of the FoVs within an experiment. 
+This plot is specific to CosMx data and uses cell centroids.
+
+```{r plot-fovs}
+# Plot the cells within their respective Field of Views (FOVs)
+plotCellsFovs(spe)
+```
+
+Because the dataset is a subset of just one Field of View of the original 
+experiment, we are able to see the identifier of the FoV in black and the 
+centroids of the cells in purple.
+
+When an experiment has multiple FoVs, you can see the map and the topological
+organization of the FoVs, together with their identifiers.
+
+# Visualizing cell types
+
+To focus on cell centroids, use the `plotCentroidsSPE` function. It provides
+a `colour_by` argument, similar to `scater`, to colour the centroids by the 
+values present in the indicated column.
+Additionally, if you have a column with a color palette it automatically maps it
+to the values passed in the `colour_by` argument.
+
+```{r plot-centroids-labels}
+# Plot the centroids of the cells in the SPE
+plotCentroids(spe, colourBy="labels")
+# Plot the centroids of the cells in the SPE with personalized labels
+plotCentroids(spe, colourBy="labels", palette="labels_colors")
+```
+
+This allow us to see the cell centroids coloured by their cell types giving us
+an idea of the cell population in the entire experiment.
+
+Additionally, the `palette` argument allows to use a user-defined palette
+for the associated centroids. The `palette` value must by a column in the 
+object `colData`.
+
+Notice that with this plot the FoV identifier is not shown.
+
+# Quality control 
+
+The `spatialPerCellQC` function, inspired by `scater::addPerCellQC`, computes
+additional metrics for each cell in the `SpatialExperiment`. It also allows for
+the detection of negative control probes, which is crucial for QC.
+
+By default, it automatically removes 0 counts cells, but this can be handled 
+with the `rmZeros` argument.
+
+```{r cosmx-analysis-qc}
+# Perform per-cell quality control checks
+spe <- spatialPerCellQC(spe, rmZeros=TRUE,
+        negProbList=c("NegPrb", "Negative", "SystemControl"))
+names(colData(spe))
+```
+
+
+# Metrics Histograms
+
+You can investigate individual metrics by viewing their histograms. For
+outliers, use the `use_fences` argument to display the fences computed by
+`computeSpatialOutlier` (see next chunk).
+
+```{r plot-metrics}
+# Plot a histogram of counts (sum)
+plotMetricHist(spe, metric="sum")
+# Plot a histogram of cell areas (Area_um)
+plotMetricHist(spe, metric="Area_um")
+# Plot a histogram of proportion of counts respect to the cell area in micron 
+plotMetricHist(spe, metric="log2CountArea")
+```
+
+These plots show, respectively, the distributions of the total counts (`sum`),
+of the Area in micron (`Area_um`) and the relationship between the counts and 
+the Area of each cell (`log2CountArea`).
+
+# Spatial Outlier Detection 
+
+Spatial outlier detection is another critical step in QC. While the flag
+score addresses some metrics, other outlier detection methods may be needed.
+
+The `computeSpatialOutlier` function allows the computation of the medcouple
+statistics on a specified metric (`compute_by` argument). 
+The medcouple is specifically designed for asymmetric distributions, indeed the
+function stamps a warning message when this requisite is not satisfied.
+It can also use `scuttle::isOutlier` for symmetric distributions. 
+The `method` argument supports `mc`, `scuttle`, or `both`.
+
+This outlier detection approach can be used to decide if and which cells can be 
+discarded on a singular metric.
+
+```{r cosmx-analysis-outlier, warning=FALSE}
+# Identify spatial outliers based on cell area (Area_um)
+spe <- computeSpatialOutlier(spe, computeBy="Area_um", method="both")
+
+# Identify spatial outliers based on mean DAPI intensity
+spe <- computeSpatialOutlier(spe, computeBy="Mean.DAPI", method="both")
+names(colData(spe))
+```
+
+If we computed outliers with the `computeSpatialOutlier` function, we can also 
+visualize which fences have been used to create the filter on the cells.
+
+```{r plot-metrics-2}
+# Plot a histogram with fences to identify outliers using the medcouple
+plotMetricHist(spe, metric="Area_um", useFences="Area_um_outlier_mc")
+
+# Plot a histogram with fences to identify outliers using scuttle
+plotMetricHist(spe, metric="Area_um", useFences="Area_um_outlier_sc")
+
+# Plot a histogram with fences to identify outliers using the medcouple
+plotMetricHist(spe, metric="Mean.DAPI", useFences="Mean.DAPI_outlier_mc")
+
+# Plot a histogram with fences to identify outliers using scuttle
+plotMetricHist(spe, metric="Mean.DAPI", useFences="Mean.DAPI_outlier_sc")
+```
+
+We visualize the fences computed with medcouple and scuttle outlier 
+detection approaches, to directly inspect differences and the amount of detected
+outlier each method detected.
+
+If we want, we can already use these fences to remove the computed outliers.
+
+# The Quality Score
+
+Next, we use `computeQScore` to calculate a flag score based on previously
+computed metrics. 
+The quality score combines **transcript counts** related to 
+**cell area**, the **aspect ratio** of each cell, and its 
+**distance from the FoV border** (only for CosMx, this last one is not used 
+otherwise).
+
+See the `help(computeQScore)` details section for additional details.
+
+```{r cosmx-analysis-score}
+# Calculate quality scores for each cell
+spe <- computeQScore(spe)
+names(colData(spe))
+```
+
+Logical filters can then be computed using `computeQScoreFlags`, which requires
+thresholds for various metrics. Currently, the function considers:
+
+* **Quality Score (`qs_threshold`)**: Cells with scores below this threshold
+    (default 0.5) are flagged for exclusion. This value can be used to indicate 
+    the quantile for the filtering when setting the `use_fs_quantiles` argument 
+    to `TRUE`.
+    
+* **Quality Score Quantiles (`use_qs_quantiles`)**: Option to filter based on
+    quantiles (default `FALSE`).
+
+
+```{r cosmx-analysis-score2}
+# Compute flags to identify cells for filtering
+spe <- computeQScoreFlags(spe, qsThreshold=0.5)
+names(colData(spe))
+table(spe$low_qscore)
+```
+
+We detected 88 cells to be removed.
+
+# Additional metrics to filter out cells
+
+While for other metrics such as the total counts and the negative prob ratio, 
+the function `computeThresholdFlags` considers:
+
+* **Total Counts (`total_threshold`)**: Minimum count threshold (default 0).
+
+* **Negative Probe Ratio (`ctrl_tot_ratio_threshold`)**: Minimum ratio of
+    negative probes to total counts (default 0.1).
+    
+```{r threshold-outlier}
+spe <- computeThresholdFlags(spe, totalThreshold=0, 
+                                ctrlTotRatioThreshold=0.1)
+table(spe$threshold_flags)
+```
+
+In this example, we don't find any cell to be removed.
+    
+
+# Adding Polygon and Visualization
+
+To better understand the quality score values we start to load the polygons, 
+giving us a better overview of the cells characteristics.
+
+We can load and add polygons to the SPE object using the following functions.
+Each technology has its own `readPolygons` function to standardize the
+loaded `sf` object and handle different file types.
+
+```{r plot-polygons}
+# Read polygon data associated with cells in the SPE
+# the polygon file path is stored in the spe metadata
+pols <- readPolygonsCosmx(metadata(spe)$polygons)
+
+# Add the polygon data to the SPE object
+spe <- addPolygonsToSPE(spe, pols)
+```
+
+Once the polygons are stored in an `sf` object within `colData`, they can be
+visualized using functions based on the `ggplot2` library.
+
+```{r plot-polygons-fov-1}
+# Plot the polygons of the selected cells
+plotPolygons(spe, bgColor="white")
+```
+
+Showing the cells on a white background for better visualization.
+
+```{r plot-polygons-fov-2}
+# Plot polygons colored by cell area
+plotPolygons(spe, colourBy="log2AspectRatio")
+plotPolygons(spe, colourBy="Area_um")
+```
+
+We can see in `yellow` and `darkviolet` that there are few cells with extreme 
+values of `log2AspectRatio` and `Area_um` in micron.
+
+```{r plot-polygons-fov-3}
+plotPolygons(spe, colourBy="quality_score")
+plotPolygons(spe, colourBy="low_qscore")
+```
+
+We can see that the quality score is able to detect both these aspects and 
+highlight the cells that are mostly isolated on the FoV border or showing a
+weird confomation.
+
+We always recommend to be aware of the cell populations in the under-study
+context, before proceeding to remove the detected cells.
+
+# Fov Zoom and Map
+
+The `plotZoomFovsMap` function allows you to visualize a map of the FoVs with
+a zoom-in of selected FoVs, colored by the `colour_by` argument.
+
+```{r plot-zoom-fov}
+plotZoomFovsMap(spe, fovs=16, colourBy="quality_score")
+plotZoomFovsMap(spe, fovs=16, colourBy="low_qscore")
+```
+
+We see on the left side the map of all the FoVs (only the FoV 16 in this case),
+together with the poligons on the right, coloured by the quality score.
+Allowing us to have a better view of a specific tissue area in the whole 
+experiment.
+
+# Conclusion
+
+In this vignette, we explored the main functionalities of the `SpaceTrooper`
+package for spatial data analysis. 
+Main steps shown are:
+* data loading: Xenium, Merfish/Merscope, CosMx 
+* polygons loading: Xenium, Merfish/Merscope, CosMx 
+* quality control: 
+    + outlier detection: medcouple and scuttle MAD
+    + flag score: a score combining **transcript counts**, **cell area**, 
+    **aspect ratio** and  **distance from the FoV border**
+* visualization: 
+    + centroids: with ggplot2
+    + polygons: sf + ggplot2
+
+# Session Information
+
+```{r sessionInfo}
+sessionInfo()
+```

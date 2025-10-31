@@ -37,7 +37,4 @@ geometry of the sf object.
 In case of not valid polygons, these are removed.
 If keeMultiPol is FALSE, possible detected multipolygons are removed.
 }
-\examples{
-# TBD
-}
 \keyword{internal}

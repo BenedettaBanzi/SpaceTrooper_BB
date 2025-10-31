@@ -6,28 +6,38 @@
 \usage{
 plotCellsFovs(
   spe,
-  sample_id = unique(spe$sample_id),
-  point_col = "darkmagenta",
-  numbers_col = "black",
-  alpha_numbers = 0.8
+  sampleId = unique(spe$sample_id),
+  pointCol = "firebrick",
+  numbersCol = "black",
+  alphaNumbers = 0.8,
+  fovDim = metadata(spe)$fov_dim
 )
 }
 \arguments{
-\item{spe}{A SpatialExperiment object}
+\item{spe}{A `SpatialExperiment` object with `fov` in `colData`.}
 
-\item{sample_id}{string indicating the sample to plot (default is NULL,
-implying a single sample in the spe)}
+\item{sampleId}{Character string identifying which sample to plot.
+Default: `unique(spe$sample_id)`.}
 
-\item{point_col}{the color to use for the dots in the plot
-(default is "darkmagenta")}
+\item{pointCol}{Color for the cell centroids. Default: `"firebrick"`.}
+
+\item{numbersCol}{Color for the FoV labels. Default: `"black"`.}
+
+\item{alphaNumbers}{Numeric transparency for FoV labels. Default: `0.8`.}
+
+\item{fovDim}{numeric with two named dimensions xdim, ydim. (Default is
+metadata(spe)$fov_dim)}
 }
 \value{
-a ggplot2 object
+A `ggplot` object showing cell centroids and FoV boundaries.
 }
 \description{
-Creates a scatter plot with all the centroids of the cells distributed inside
-their own FoVs as an overlapping grid.
+Plot cell centroids in FoVs
+Creates a scatter plot with cell centroids arranged in their FoVs as an
+overlapping grid.
 }
 \examples{
-# TBD
+example(readCosmxSPE)
+g <- plotCellsFovs(spe)
+print(g)
 }

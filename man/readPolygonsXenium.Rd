@@ -17,7 +17,8 @@ readPolygonsXenium(
 \item{polygonsFile}{A character string specifying the file path to the
 polygon data.}
 
-\item{type}{A character string specifying the file type ("parquet" or "csv").}
+\item{type}{A character string specifying the file type ("parquet" or "csv").
+Default is parquet.}
 
 \item{x}{A character string specifying the x-coordinate column.}
 
@@ -35,6 +36,7 @@ An `sf` object containing the Xenium polygon data.
 This function reads polygon data specific to Xenium technology.
 }
 \examples{
-# Read Xenium polygon data from a Parquet file:
-# polygons <- readPolygonsXenium("path/to/polygons.parquet", type="parquet")
+example(readXeniumSPE)
+polygons <- readPolygonsXenium(metadata(spe)$polygons, type="parquet")
+polygons
 }

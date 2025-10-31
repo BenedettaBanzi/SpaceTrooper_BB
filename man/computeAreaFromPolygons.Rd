@@ -4,20 +4,19 @@
 \alias{computeAreaFromPolygons}
 \title{computeAreaFromPolygons}
 \usage{
-computeAreaFromPolygons(polygons, coldata)
+computeAreaFromPolygons(polygons)
 }
 \arguments{
 \item{polygons}{An `sf` object containing polygon data.}
-
-\item{coldata}{A `DataFrame` containing the `colData` to which area information will be added.}
 }
 \value{
-A `DataFrame` with the added area information.
+A `numeric` vector with the area information.
 }
 \description{
-This function computes the area from polygon data and adds it to the `colData`.
+This function computes the area from polygon data.
 }
 \examples{
-# Assuming `polygons` is an sf object and `coldata` is a DataFrame:
-# coldata <- computeAreaFromPolygons(polygons, coldata)
+example(readPolygonsMerfish)
+area <- computeAreaFromPolygons(polygons)
+area
 }

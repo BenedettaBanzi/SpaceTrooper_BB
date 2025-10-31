@@ -6,7 +6,7 @@
 \usage{
 computeSpatialOutlier(
   spe,
-  compute_by = NULL,
+  computeBy = NULL,
   method = c("mc", "scuttle", "both"),
   mcDoScale = FALSE,
   scuttleType = c("both", "lower", "higher")
@@ -16,8 +16,8 @@ computeSpatialOutlier(
 \item{spe}{a SpatialExperiment object with target_counts, area in micron
 and log2 of the aspect ratio in the `colData`.}
 
-\item{compute_by}{character indicating a `colData` column name on which compute
-the outlier.}
+\item{computeBy}{character indicating a `colData` column name on which
+compute the outlier.}
 
 \item{method}{one of `mc`, `scuttle`, `both`.
 Use `mc` for medcouple, `scuttle` for median absolute deviations as computed
@@ -27,6 +27,8 @@ in `scuttle`, `both` for computing both of them.}
 for the outlier detection should be scaled (default is FALSE, as suggested
 by the original Medcouple authors.). See \link[robustbase]{mc} for further
 readings.}
+
+\item{scuttleType}{One of `"both"`, `"lower"`, `"higher"` for scuttle method.}
 }
 \value{
 a SpatialExperiment object with additional column(s) (named as
@@ -41,8 +43,8 @@ It gives the possibility to choose between the medcouple (mc method argument)
 and the MADs (scuttle method argument).
 }
 \details{
-The medcouple method is a measure for the skeweness of univariate distribution
-as described in Hubert M. et al. (2008).
+The medcouple method is a measure for the skeweness of univariate
+distribution as described in Hubert M. et al. (2008).
 In particular, the computed medcouple value must be in a range between -0.6
 and 0.6 to computed adjusted boxplots and perform the outlier detection.
 For median absolute deviations (MADs) method we just wrap the isOutlier
@@ -50,5 +52,8 @@ function in the scuttle package. Please see McCarthy DJ et al (2017)
 for further details.
 }
 \examples{
-# TBD
+example(spatialPerCellQC)
+spe <- computeSpatialOutlier(spe, computeBy="log2CountArea", method="both")
+table(spe$log2CountArea_outlier_mc)
+table(spe$log2CountArea_outlier_sc)
 }

@@ -4,12 +4,12 @@
 \alias{.negative_image_theme}
 \title{.negative_image_theme}
 \usage{
-.negative_image_theme(fill_color = "black", fore_color = "white")
+.negative_image_theme(fillColor = "black", foreColor = "white")
 }
 \arguments{
-\item{fill_color}{color to fill the element_rect (default is "black")}
+\item{fillColor}{color to fill the element_rect (default is "black")}
 
-\item{fore_color}{color for all the other elements (default is "white")}
+\item{foreColor}{color for all the other elements (default is "white")}
 }
 \value{
 a ggplot2 theme object

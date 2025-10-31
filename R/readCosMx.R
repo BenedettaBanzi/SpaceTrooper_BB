@@ -1,28 +1,29 @@
 #' readCosmxSPE
+#' @name readCosmxSPE
+#' @rdname readCosmxSPE
+#' @aliases readCosmxSPE readCosmxProteinSPE
 #' @description
 #' Read and Construct a SpatialExperiment Object from CosMx Data
 #'
 #' This function reads in data from Nanostring CosMx files and constructs a
 #' `SpatialExperiment` object, optionally including polygon data.
 #'
-#' @param dirname A character string specifying the directory containing the
+#' @param dirName A character string specifying the directory containing the
 #' CosMx data files.
-#' @param sample_name A character string specifying the sample name. Default is
+#' @param sampleName A character string specifying the sample name. Default is
 #' `"sample01"`.
-#' @param coord_names A character vector specifying the names of the spatial
+#' @param coordNames A character vector specifying the names of the spatial
 #' coordinate columns in the data. Default is `c("CenterX_global_px",
 #' "CenterY_global_px")`.
-#' @param countmatfpattern A character string specifying the pattern to match
+#' @param countMatFPattern A character string specifying the pattern to match
 #' the count matrix file. Default is `"exprMat_file.csv"`.
-#' @param metadatafpattern A character string specifying the pattern to match
+#' @param metadataFPattern A character string specifying the pattern to match
 #' the metadata file. Default is `"metadata_file.csv"`.
-#' @param polygonsfpattern A character string specifying the pattern to match
+#' @param polygonsFPattern A character string specifying the pattern to match
 #' the polygons file. Default is `"polygons.csv"`.
-#' @param keep_polygons A logical value indicating whether to include polygon
-#' data in the resulting `SpatialExperiment` object. Default is `FALSE`.
-#' @param fovposfpattern A character string specifying the pattern to match the
+#' @param fovPosFPattern A character string specifying the pattern to match the
 #' FOV positions file. Default is `"fov_positions_file.csv"`.
-#' @param fov_dims A named numeric vector specifying the dimensions of the FOV
+#' @param fovdims A named numeric vector specifying the dimensions of the FOV
 #' in pixels. Default is `c(xdim=4256, ydim=4256)`.
 #'
 #' @return A `SpatialExperiment` object containing the read CosMx data,
@@ -32,108 +33,109 @@
 #' metadata, and FOV positions, and constructs a `SpatialExperiment` object.
 #' Optionally, polygon data can be read and added to the object.
 #'
+#' readCosmxProteinSPE is a wrapper of readCosmxSPE, it only changes the
+#' technology metadata in Nanostring_CosMx_Protein.
+#'
+#' @author Dario Righelli, Benedetta Banzi
+#'
 #' @importFrom data.table fread merge.data.table
 #' @importFrom SpatialExperiment SpatialExperiment
 #' @importFrom S4Vectors DataFrame
+#' @importFrom dplyr mutate
+#' @importFrom SpatialExperimentIO readCosmxSXE
 #' @export
 #'
 #' @examples
-#' # Assuming the data files are located in "path/to/cosmx_data":
-#' #spe <- readCosmxSPE(dirname = "path/to/cosmx_data")
-## for old fovs consider dimensions 5472 x 3648 pixels.
-readCosmxSPE <- function(dirname,
-                        sample_name="sample01",
-                        coord_names=c("CenterX_global_px", "CenterY_global_px"),
-                        countmatfpattern="exprMat_file.csv",
-                        metadatafpattern="metadata_file.csv",
-                        polygonsfpattern="polygons.csv",
-                        keep_polygons=FALSE,
-                        fovposfpattern="fov_positions_file.csv",
-                        fov_dims=c(xdim=4256, ydim=4256))
-{
-    stopifnot(all(names(fov_dims) == c("xdim", "ydim"), file.exists(dirname)))
-    countmat_file <- list.files(dirname, countmatfpattern, full.names=TRUE)
-    metadata_file <- list.files(dirname, metadatafpattern, full.names=TRUE)
-    fovpos_file <- list.files(dirname, fovposfpattern, full.names=TRUE)
-    pol_file <- list.files(dirname, polygonsfpattern, full.names=TRUE) #check if parquet
+#' cospath <- system.file(file.path("extdata", "CosMx_DBKero_Tiny"),
+#'    package="SpaceTrooper")
+#' spe <- readCosmxSPE(cospath, sampleName="DBKero_Tiny")
+readCosmxSPE <- function(dirName, sampleName="sample01",
+    coordNames=c("CenterX_global_px", "CenterY_global_px"),
+    countMatFPattern="exprMat_file.csv", metadataFPattern="metadata_file.csv",
+    polygonsFPattern="polygons.csv", fovPosFPattern="fov_positions_file.csv",
+    fovdims=c(xdim=4256, ydim=4256)) {
 
-    # stopifnot(all(file.exists(countmat_file), file.exists(metadata_file),
-    #               file.exists(fovpos_file), file.exists(pol_file)))
+    stopifnot(all(names(fovdims) == c("xdim", "ydim"), file.exists(dirName)))
 
-    # Read in
-    countmat <- data.table::fread(countmat_file, showProgress=FALSE) # cell count matrix
-    metadata <- data.table::fread(metadata_file, showProgress=FALSE) # cell metadata
+    spe <- SpatialExperimentIO::readCosmxSXE(dirName=dirName, returnType="SPE",
+        countMatPattern=countMatFPattern, metaDataPattern=metadataFPattern,
+        coordNames=coordNames, addFovPos=TRUE, fovPosPattern=fovPosFPattern,
+        altExps=NULL,addParquetPaths=FALSE)
 
-    # Count matrix
-    counts <- merge.data.table(countmat, metadata[, c("fov", "cell_ID")])
-    cn <- paste0("f", counts$fov, "_c", counts$cell_ID)
-    counts <- subset(counts, select = -c(fov, cell_ID))
-
-    # cell_codes <- rownames(counts)
-    features <- colnames(counts)
-    counts <- t(as.matrix(counts)) #### faster when it comes to big numbers
-
-    rownames(counts) <- features
-    colnames(counts) <- cn
-
-    # rowData (does not exist)
-    # To be associated to the tx file
-    # use readSparseCSV sparseArray from harve pege
-
-    # colData
-    colData <- DataFrame(merge.data.table(metadata,
-                                        countmat[, c("fov", "cell_ID")]))
-    rn <- paste0("f", colData$fov, "_c", colData$cell_ID)
-    rownames(colData) <- rn
-
+    pol_file <- list.files(dirName, polygonsFPattern, full.names=TRUE)#parquet?
+    cn <- paste0("f", spe$fov, "_c", spe$cell_ID)
+    colnames(spe) <- cn
+    rownames(colData(spe)) <- cn
     if(length(grep("cell_id", colnames(colData)))!=0)
-        message("Warning: overwriting existing cell_id column in colData")
+        warning("Overwriting existing cell_id column in colData")
+    spe$cell_id <- cn
+    spe <- .checkFovPositionVersion(spe)
+    metadata(spe) <- list(fov_positions=metadata(spe)$fov_positions,
+        fov_dim=fovdims, polygons=pol_file, technology="Nanostring_CosMx")
 
-    colData$cell_id <- rn
-    colData <- colData[,c(1,2,dim(colData)[2], 3:(dim(colData)[2]-1))]
-    ## multiply spatial coordinates in micron multiplying by 0.18 and store
-    ## two additional columns depends by technology version
-
-    fov_positions <- as.data.frame(data.table::fread(fovpos_file, header=TRUE))
-
-    ## patch for let this work also with older versions of CosMx fov position
-    ## output file
-    fovcidx <- grep("FOV", colnames(fov_positions))
-    if(length(fovcidx)!=0) colnames(fov_positions)[fovcidx] <- "fov"
-    fovccdx <- grep("[X|Y]_px", colnames(fov_positions))
-    if(length(fovccdx)!=0)
-    {
-        colnames(fov_positions)[fovccdx] <- gsub("_px", "_global_px",
-                                            colnames(fov_positions)[fovccdx])
-    }
-
-    ## tracking if one of more fov is not present in the metadata file ##
-    idx <- fov_positions$fov %in% unique(metadata$fov)
-    fov_positions <- fov_positions[idx,]
-    fov_positions <- fov_positions[order(fov_positions$fov),]
-    ####
-    spe <- SpatialExperiment::SpatialExperiment(
-        sample_id=sample_name,
-        assays = list(counts = counts),
-        # rowData = rowData,
-        colData = colData,
-        spatialCoordsNames = coord_names,
-        metadata=list(fov_positions=fov_positions, fov_dim=fov_dims,
-                        polygons=pol_file, technology="Nanostring_CosMx")
-        ## keep atomx versioning in metadata, if possible
-    )
-
-    #### CHANGE SPE constructor WITH COORDINATES IN COLDATA #########
-    colData(spe) <- cbind.DataFrame(colData(spe), spatialCoords(spe))
-
-    # Polygons file has cellID instead of cell_ID and it distinguish better
-    # when compared to our cell_id
-    names(colData(spe))[names(colData(spe))=="cell_ID"] <- "cellID"
-    if(keep_polygons)
-    {
-        polygons <- readPolygonsCosmx(metadata(spe)$polygons)
-        spe <- addPolygonsToSPE(spe, polygons)
-    }
+    names(colData(spe))[names(colData(spe)) == "cell_ID"] <- "cellID"
+    spe$sample_id <- sampleName
     return(spe)
 }
 
+#' @export
+readCosmxProteinSPE <- function(dirName, sampleName="sample01",
+    coordNames=c("CenterX_global_px", "CenterY_global_px"),
+    countMatFPattern="exprMat_file.csv", metadataFPattern="metadata_file.csv",
+    polygonsFPattern="polygons.csv", fovPosFPattern="fov_positions_file.csv",
+    fovdims=c(xdim=4256, ydim=4256)) {
+
+    spe <- readCosmxSPE(dirName, sampleName, coordNames, countMatFPattern,
+        metadataFPattern, polygonsFPattern, fovPosFPattern, fovdims)
+
+    metadata(spe)$technology <- "Nanostring_CosMx_Protein"
+    return(spe)
+}
+
+#' Check and Standardize FOV Position Column Names
+#'
+#' This internal utility function standardizes column names of a data frame
+#' containing Field of View (FOV) positional information.
+#' It modifies column names to ensure compatibility with expected naming
+#' conventions, including support for older formats.
+#'
+#' Specifically, it:
+#' - Renames any column containing "FOV" to "fov"
+#' - Converts columns with coordinates matching "X", "Y", or "Z" to lowercase
+#' - Replaces suffix "_px" with "_global_px" for coordinate pixel columns
+#' - If the input contains `x_mm` and `y_mm` columns, the function computes
+#' corresponding `x_global_px` and `y_global_px` values by converting from
+#' millimeters to pixels using a fixed resolution factor (0.12028 mm/pixel).
+#' @param spe A `SpatialExperiment` containing FOV position information
+#' in the metadata to be standardized.
+#'
+#' @return A `SpatialExperiment` with updated and standardized column names
+#' for the metadata `fov_position` `data.frame`.
+#'
+#' @keywords internal
+#' @noRd
+
+.checkFovPositionVersion <- function(spe)
+{
+    fovpos <- metadata(spe)$fov_positions
+    fovcidx <- grep("FOV", colnames(fovpos)) # works also with older vers
+    if(length(fovcidx)!=0) colnames(fovpos)[fovcidx] <- "fov"
+    fovcrdx <- grep("[X|Y|Z]", colnames(fovpos))
+    if(length(fovcrdx)!=0) colnames(fovpos)[fovcrdx] <-
+        tolower(colnames(fovpos)[fovcrdx])
+    fovccdx <- grep("[x|y]_px", colnames(fovpos))
+    if(length(fovccdx)!=0) colnames(fovpos)[fovccdx] <-
+        gsub("_px", "_global_px", colnames(fovpos)[fovccdx])
+
+    if(length(grep("x_mm", colnames(fovpos))!=0)) {
+        fovpos <- fovpos |>
+            dplyr::mutate(x_global_px = x_mm/0.12028*10^3,
+                        y_global_px = (y_mm/0.12028*10^3) - 4256)
+    }
+    idx <- fovpos$fov %in% unique(spe$fov)
+    fovpos <- fovpos[idx, ]
+
+    fovpos <- fovpos[order(fovpos$fov), ]
+    metadata(spe)$fov_positions <- fovpos
+    return(spe)
+}

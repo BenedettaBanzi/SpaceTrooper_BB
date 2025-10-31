@@ -7,13 +7,11 @@
 plotZoomFovsMap(
   spe,
   fovs = NULL,
-  colour_by = NULL,
-  map_point_col = "darkmagenta",
-  map_numbers_col = "black",
-  map_alpha_numbers = 0.8,
+  mapPointCol = "darkmagenta",
+  mapNumbersCol = "black",
+  mapAlphaNumbers = 0.8,
   title = NULL,
-  ...,
-  useggplot = TRUE
+  ...
 )
 }
 \arguments{
@@ -23,22 +21,19 @@ data.}
 \item{fovs}{A character vector specifying the FOVs to be zoomed in and
 plotted. Must match values in the `fov` column of `colData(spe)`.}
 
-\item{colour_by}{An optional character string specifying the column in
-`colData(spe)` to use for coloring the polygons. Default is `NULL`.}
-
-\item{map_point_col}{A character string specifying the color of the points
+\item{mapPointCol}{A character string specifying the color of the points
 in the map. Default is `"darkmagenta"`.}
 
-\item{map_numbers_col}{A character string specifying the color of the
+\item{mapNumbersCol}{A character string specifying the color of the
 numbers on the map. Default is `"black"`.}
 
-\item{map_alpha_numbers}{A numeric value specifying the transparency of the
+\item{mapAlphaNumbers}{A numeric value specifying the transparency of the
 numbers on the map. Default is `0.8`.}
 
 \item{title}{An optional character string specifying the title of the final
 plot. If `NULL`, no title is added. Default is `NULL`.}
 
-\item{...}{Additional arguments passed to `plotPolygonsSPE`.}
+\item{...}{Additional arguments passed to `plotPolygons`.}
 }
 \value{
 A combined plot showing a map of all FOVs with zoomed-in views of
@@ -59,7 +54,6 @@ these into a single side-by-side visualization. If `title` is not `NULL`, it
 adds a title to the combined plot.
 }
 \examples{
-# Assuming 'spe' is a SpatialExperiment object with FOVs and polygon data:
-# plotZoomFovsMap(spe, fovs = c("FOV1", "FOV2"), colour_by = "cell_type",
-#                title = "Zoomed FOVs with Polygons")
+example(readAndAddPolygonsToSPE)
+plotZoomFovsMap(spe, fovs=16, title="FOV 16")
 }

@@ -18,5 +18,6 @@ an sf object
 .setActiveGeometry
 }
 \examples{
-#TBD
+example(readPolygonsCosmx)
+.setActiveGeometry(polygons, "local")
 }

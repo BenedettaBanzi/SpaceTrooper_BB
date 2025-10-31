@@ -1,23 +1,29 @@
 Package: SpaceTrooper
 Type: Package
-Title: SpaceTrooper performs Quality Control analysis of Image-Based spatial data
-Version: 0.1.0
+Title: SpaceTrooper performs Quality Control analysis of Image-Based spatial
+Version: 0.99.4
 Authors@R:
-    c(person(given="Dario", family="Righelli", email="dario.righelli@gmail.com",
-        role=c("aut", "cre")),
-        person(given="Benedetta", family="Banzi", role="aut"),
-          person(given="Oriana", family="Romano", role="aut"),
-          person(given="Mattia", family="Forcato", role="aut"),
-          person(given="Silvio", family="Bicciato", role="aut"),
-          person(given="Davide", family="Risso", role="aut"))
-Maintainer: Dario Righelli <dario.righelli@gmail.com>
-Description: SpaceTrooper performs Quality Control analysis of Image-Based 
-    spatial data, providing exploration plots, QC metrics computation,
-    outlier detection.
+        c(person(given="Benedetta", family="Banzi", role="aut"),
+        person("Dario", "Righelli",
+            email = "dario.righelli@gmail.com",
+            role = c("aut", "cre"),
+            comment=c(ORCID="0000-0003-1504-3583")),
+        person(given="Oriana", family="Romano", role="aut"),
+        person(given="Matteo", family="Merchionni", role="aut"),
+        person(given="Mattia", family="Forcato", role="aut"),
+        person(given="Silvio", family="Bicciato", role="aut"),
+        person(given="Davide", family="Risso", role="aut"))
+Description: SpaceTrooper performs Quality Control analysis using data driven 
+    GLM models of Image-Based spatial data, providing exploration plots, 
+    QC metrics computation, outlier detection.
+    It implements a GLM strategy for the detection of low quality cells in 
+    imaging-based spatial data (Transcriptomics and Proteomics). 
+    It additionally implements several plots for the visualization of 
+    imaging based polygons through the ggplot2 package.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
 Depends: 
+    R (>= 4.4.0),
     SpatialExperiment
 Imports:
     DropletUtils,
@@ -34,8 +40,31 @@ Imports:
     scuttle,
     sf,
     sfheaders,
-    terra,
     tmap,
-    tools
+    cowplot,
+    glmnet,
+    rhdf5,
+    methods,
+    rlang,
+    SpatialExperimentIO
 Suggests:
-RoxygenNote: 7.2.3
+    knitr,
+    rmarkdown,
+    BiocStyle,
+    testthat (>= 3.0.0),
+    withr,
+    viridis
+biocViews: 
+    Software, 
+    Transcriptomics, 
+    GeneExpression, 
+    QualityControl, 
+    Spatial, 
+    SingleCell,
+    DataImport,
+    ImmunoOncology
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
+BugReports: https://github.com/drighelli/SpaceTrooper/issues
+URL: https://github.com/drighelli/SpaceTrooper
+Config/testthat/edition: 3

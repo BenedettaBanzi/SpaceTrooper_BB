@@ -16,5 +16,6 @@ character with the name of the active geometry
 .getActiveGeometryName
 }
 \examples{
-#TBD
+example(readPolygonsCosmx)
+.getActiveGeometryName(polygons)
 }

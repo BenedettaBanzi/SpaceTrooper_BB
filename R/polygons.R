@@ -1,10 +1,12 @@
 #' readPolygons
+#' @name readPolygons
+#' @rdname readPolygons
 #' @description
-#'  Read and Validate Polygons from a File
+#' Read and Validate Polygons from a File
 #'
-#' This function reads polygon data from a specified file, validates the polygons,
-#' and returns them as an `sf` object. It supports multiple file formats and can
-#' handle both global and local coordinates.
+#' This function reads polygon data from a specified file, validates the
+#' polygons, and returns them as an `sf` object. It supports multiple file
+#' formats and can handle both global and local coordinates.
 #'
 #' @param polygonsFile A character string specifying the path to the polygon
 #' file.
@@ -34,56 +36,32 @@
 #' @importFrom arrow read_parquet
 #' @importFrom sf st_geometry
 #' @export
-#'
 #' @examples
-#' # Reading polygon data from a CSV file:
-#' # polygons <- readPolygons("~/Downloads/CosMx_data/polygons.csv")
-#'
-#' # Reading polygon data from a Parquet file with verbose output:
-#' # polygons <- readPolygons("~/Downloads/CosMx_data/polygons.parquet",
-#' #                         type = "parquet", verbose = TRUE)
+#' example(readCosmxSPE)
+#' polygons <- readPolygons(metadata(spe)$polygons)
+#' polygons
 readPolygons <- function(polygonsFile, type=c("csv", "parquet", "h5"),
-                            x=c("x_global_px", "vertex_x"),
-                            y=c("y_global_px", "vertex_y"),
-                            xloc="x_local_px", yloc="y_local_px",
-                            #micronConvFact=0.12,
-                            keepMultiPol=TRUE,
-                            verbose=FALSE)
-{
-
+    x=c("x_global_px", "vertex_x"), y=c("y_global_px", "vertex_y"),
+    xloc="x_local_px", yloc="y_local_px", #micronConvFact=0.12,
+    keepMultiPol=TRUE, verbose=FALSE){
     stopifnot(file.exists(polygonsFile))
     type <- match.arg(type)
-    # type <- grep("csv", polygonsFile)
+    x <- match.arg(x)
+    y <- match.arg(y)
 
-    if(type=="h5")
-    {
-        # polfiles <- list.files(polygonsFolder, pattern=hdf5pattern,
-        #                        full.names=TRUE)
-        # dfsfl <- lapply(seq_along(polfiles), function(i)
-        # {
-        #     poll <- readh5polygons(pol_file=polfiles[i])
-        #     df <- data.frame(cell_id=paste0("f", i-1, "_c", poll$ids),
-        #                      cell_ID=poll$ids,
-        #                      fov=i-1, geometry=sf::st_sfc(poll$g))
-        #     dfsf <- sf::st_sf(df)
-        # })
-        # polygons <- do.call(rbind, dfsfl)
+    if(type=="h5") {
+        stop("h5 support is momentarily disabled, please report an issue on GH")
     } else {
         spat_obj <- switch(type, csv=fread(polygonsFile),
                                 parquet=read_parquet(polygonsFile))
-        if (! "cell_id" %in% colnames(spat_obj))
-        {
+        if (! "cell_id" %in% colnames(spat_obj)) {
             spat_obj$cell_id <- paste0("f", spat_obj$fov, "_c", spat_obj$cellID)
         }
-
         spat_obj$cell_id <- as.factor(spat_obj$cell_id)
-
         polygons <- .createPolygons(spat_obj, x=x, y=y,
                                         polygon_id="cell_id")
-        polygons <- .renameGeometry(polygons, "geometry", "global") ## only for cosmx
-
-        if(all(c(xloc, yloc) %in% colnames(spat_obj)))
-        {
+        polygons <- .renameGeometry(polygons, "geometry", "global") ##for cosmx
+        if(all(c(xloc, yloc) %in% colnames(spat_obj))) {
             idxs <- which(colnames(polygons) %in% c(xloc, yloc))
             polygons <- polygons[,-idxs]
             polygons_loc <- .createPolygons(spat_obj, x=xloc, y=yloc,
@@ -91,30 +69,19 @@ readPolygons <- function(polygonsFile, type=c("csv", "parquet", "h5"),
             polygons <- cbind(polygons, polygons_loc$geometry)
             polygons <- .renameGeometry(polygons, "geometry", "local")
         }
-
-        if(verbose) message("Polygons detected: ", dim(polygons)[1])#### otherwise
-        #### will print number of columns next to the numer of rows
-
+        if(verbose) message("Polygons detected: ", dim(polygons)[1])
         polygons <- .checkPolygonsValidity(polygons, keepMultiPol=keepMultiPol,
                                             verbose=verbose)
-
-        rownames(polygons) <- polygons$cell_id #### if not here, then the check
-        #### in addPolygonsToSPE cannot be be done
-
-        #### identical cannot work since coordinates are different, but the validity
-        #### and the geometries as well should stay the same
-        #### needs to be changed or ignored
-        # if(!table(st_is_valid(polygons$global))==table(st_is_valid(polygons$global)))
-        #     warning("Global and Local geometries are not identical")
-        if(verbose) message("Polygons after validity: ", dim(polygons)[1])#### otherwise
-        #### will print number of columns next to the numer of rows
+        rownames(polygons) <- polygons$cell_id #needed x check addPolygonsToSPE
+        if(verbose) message("Polygons after validity: ", dim(polygons)[1])
         return(polygons)
     }
-    ### write polygons as parquet file
 }
 
 
 #' .checkPolygonsValidity
+#' @name .checkPolygonsValidity
+#' @rdname dot-checkPolygonsValidity
 #' @description checks validity on a geometry of `sf` object.
 #' It removes multipolygons when `keepMultiPol` is `FALSE`
 #'
@@ -137,37 +104,17 @@ readPolygons <- function(polygonsFile, type=c("csv", "parquet", "h5"),
 #' removed.
 #' @keywords internal
 #' @importFrom sf st_is_valid st_buffer st_geometry_type
-#'
-#' @examples
-#' # TBD
 .checkPolygonsValidity <- function(sf, geometry=NULL, keepMultiPol=TRUE,
-                                    verbose=FALSE)
-{
+    verbose=FALSE) {
     stopifnot(is(sf, "sf"))
-    if(is.null(geometry))
-    {
-        geometry <- .getActiveGeometryName(sf)
+    if(is.null(geometry)) { geometry <- .getActiveGeometryName(sf)
     } else {
         act <- .getActiveGeometryName(sf)
         sf <- .setActiveGeometry(sf, geometry)
     }
-
-    sf_tf <- st_is_valid(sf) # to parallelize? how? split sf in multiple sf and parallelize on it?
-
+    sf_tf <- st_is_valid(sf) # TODO: parallelize splitting sf ?
     if(sum(sf_tf)!=dim(sf)[1]) sf <- st_buffer(sf, dist=0)
-
-    ############ CHECKING MULTIPOLYGONS
-    # Subsetting to remove non-polygons
-    # cellids <- unlist(apply(sf, 1, function(geom)
-    # {
-
-        # just in case of custom in cosmx but present in automatic in xenium
-        # if(attr(geom[[geometry]], "class")[2] == "MULTIPOLYGON")
-        # {
-        #     return(geom$cell_id)
-        # }
-    # }))
-    is_multi <- sf::st_geometry_type(sf$global) == "MULTIPOLYGON"
+    is_multi <- sf::st_geometry_type(sf[[geometry]]) == "MULTIPOLYGON" ## <<<<
     ## TRUE is merscope - FALSE is cosmx and xenium
     merscopeFl <- (sum(is_multi) == dim(sf)[1])
     funct <- ifelse(merscopeFl, "lengths", "length")
@@ -176,68 +123,176 @@ readPolygons <- function(polygonsFile, type=c("csv", "parquet", "h5"),
     idx <- which(sums!=1)
     sf$is_multi <- FALSE
     sf$multi_n <- 1
-    if(length(idx)!=0)
-    {
+    if(length(idx)!=0) {
         sf$is_multi[idx] <- TRUE
         sf$multi_n[idx] <- unlist(sums[idx])
-
     }
-    if( all(merscopeFl, length(idx)!=0) )
-    {
-        sf$global[-idx] <- st_cast(sf$global[-idx], "POLYGON")
+    if( merscopeFl ) {
+        if( length(idx)!=0 ) {
+            sf$global[-idx] <- st_cast(sf$global[-idx], "POLYGON")
+        } else {
+            sf$global <- st_cast(sf$global, "POLYGON")
+        }
     }
 
     if(verbose) message("Detected ", sum(sf$is_multi), " multipolygons.")
-
-    if(!keepMultiPol)
-    {
+    if(!keepMultiPol) {
         if(verbose) message("Removing ", sum(sf$is_multi), " multipolygons.")
         sf <- sf[!sf$is_multi,]
     }
-
     if(exists("act")) sf <- .setActiveGeometry(sf, act)
-
     return(sf)
 }
 
-#' addPolygonsToSPE
+#' readAndAddPolygonsToSPE
+#' @name readAndAddPolygonsToSPE
+#' @rdname readAndAddPolygonsToSPE
+#' @description Read and Add Polygons to a SpatialExperiment Object
 #'
+#' This function reads polygon boundary data based on the technology associated
+#' with the provided SpatialExperiment (SPE) object and adds the polygons to the
+#' SPE.
+#'
+#' @param spe A \code{SpatialExperiment} object. The object should contain
+#' metadata with the field \code{"technology"}, specifying the technology used
+#' (e.g., "Nanostring_CosMx", "Vizgen_MERFISH", or "10X_Xenium").
+#' @param keepMultiPol Logical. If \code{TRUE}, multi-polygon features will be
+#' kept when reading the boundary data. Defaults to \code{TRUE}.
+#' @param boundariesType Character. Specifies the type of boundary file format
+#' to read. Options are \code{"HDF5"} or \code{"parquet"}. Defaults to
+#' \code{"HDF5"}.
+#' @param polygonsCol character indicating the name of the polygons column to
+#' add into the colData (default is `polygons`).
+#'
+#' @return A \code{SpatialExperiment} object with the added polygon data.
+#'
+#' @export
+#'
+#' @examples
+#' example(readCosmxSPE)
+#' spe <- readAndAddPolygonsToSPE(spe)
+#' colData(spe)
+readAndAddPolygonsToSPE <- function(spe, polygonsCol="polygons",
+    keepMultiPol=TRUE, boundariesType=c("csv", "HDF5", "parquet"))
+{
+    boundariesType <- match.arg(boundariesType)
+    stopifnot("technology" %in% names(metadata(spe)))
+    tech <- metadata(spe)$technology
+    switch(tech,
+            "Nanostring_CosMx"={
+                polygons <- readPolygonsCosmx(metadata(spe)$polygons)
+            },
+            "Vizgen_MERFISH"={
+                ##### NEED TO HANDLE THE DIFFERENCES BETWEEN HDF5 FILES
+                ##### AND PARQUET, TO PROPAGATE TO READING FUNCTION
+                # ifelse(boundariesType=="HDF5", merpol=)
+                polygons <- readPolygonsMerfish(metadata(spe)$polygons,
+                                keepMultiPol=TRUE, type=boundariesType)
+            },
+            "10X_Xenium"={
+                polygons <- readPolygonsXenium(metadata(spe)$polygons,
+                                            keepMultiPol=TRUE)
+            },
+            stop("Unrecognized technology, please use an SPE from one of ",
+                "Nanostring_CosMx, Vizgen_MERFISH and 10x_Xenium")
+    )
+    spe <- addPolygonsToSPE(spe, polygons, polygonsCol=polygonsCol)
+    return(spe)
+}
+
+
+
+#' .addPolygonsToCD
+#' @name .addPolygonsToCD
+#' @rdname dot-addPolygonsToCD
+#' @description
+#' This function enriches a DataFrame (e.g., from colData) with matching polygon
+#' geometries.
+#'
+#' @param cd A DataFrame containing at least `fov` and `cellID` columns.
+#' @param polygons An sf object with matching `fov` and `cellID` columns.
+#' @param polygonsCol character indicating the name of the polygons column to
+#' add into the colData (default is `polygons`).
+#' @return A DataFrame identical to `cd`, but row‑subset to cells present in
+#' `polygons` and with a new `polygons` list‑column of sf geometries.
+#' @keywords internal
+.addPolygonsToCD <- function(cd, polygons, polygonsCol="polygons") {
+    stopifnot(inherits(cd, "DataFrame"), inherits(polygons, "sf"))
+
+    if("fov" %in% colnames(polygons)) ## case of CosMx
+    {
+        # Build consistent cell IDs
+        cd$cell_id <- paste0("f", cd$fov, "_c", cd$cellID)
+        polygons$cell_id <- paste0("f", polygons$fov, "_c", polygons$cellID)
+        rownames(cd) <- cd$cell_id
+        rownames(polygons) <- polygons$cell_id
+    } else { ## valid for both xenium and merfish
+        rownames(cd) <- cd$cell_id
+        rownames(polygons) <- polygons$cell_id
+    }
+
+    # Identify matching cells
+    common_ids <- intersect(rownames(cd), rownames(polygons))
+    if (length(common_ids) == 0) {
+        stop("No matching cell IDs between 'cd' and 'polygons'.")
+    }
+    if (length(common_ids) < nrow(cd)) {
+        warning(sprintf(
+            "%d/%d cells have polygon data; subsetting to matches.",
+            length(common_ids), nrow(cd)
+        ))
+    }
+
+    # Subset and attach
+    cd <- cd[common_ids, , drop = FALSE]
+    polygons <- polygons[common_ids, , drop = FALSE]
+    cd[[polygonsCol]] <- polygons
+
+    return(cd)
+}
+
+
+#' addPolygonsToSPE
+#' @name addPolygonsToSPE
+#' @rdname addPolygonsToSPE
 #' @description This function adds polygon data to a `SpatialExperiment` object.
 #'
 #' @param spe A `SpatialExperiment` object to which polygons will be added.
 #' @param polygons An `sf` object containing the polygon data.
-#'
+#' @param polygonsCol character indicating the name of the polygons column to
+#' add into the colData (default is `polygons`).
 #' @return The `SpatialExperiment` object with polygons added to the `colData`.
 #'
 #' @importFrom dplyr left_join
 #' @export
 #'
 #' @examples
-#' # Assuming `spe` is a SpatialExperiment object and `polygons` is an sf object:
-#' # spe <- addPolygonsToSPE(spe, polygons)
-addPolygonsToSPE <- function(spe, polygons)
-{
-    stopifnot(all(is(spe, "SpatialExperiment"), is(polygons, "sf")))
+#' example(readCosmxSPE)
+#' polygons <- readPolygonsCosmx(metadata(spe)$polygons)
+#' spe <- addPolygonsToSPE(spe, polygons)
+#' spe$polygons
+addPolygonsToSPE <- function(spe, polygons, polygonsCol="polygons") {
+    stopifnot(inherits(spe, "SpatialExperiment"), inherits(polygons, "sf"))
 
-    if (sum(rownames(polygons) == colnames(spe)) != dim(spe)[2])
-    {
-        cd <- data.frame(colData(spe))
-        polygons <- left_join(polygons, cd[, c("fov", "cellID")],
-                              by=c("fov", "cellID"))
-        cd <- left_join(cd, polygons[ , c("fov", "cellID")],
-                        by=c("fov","cellID"))
-        rownames(cd) <- cd$cell_id
-        rownames(polygons) <- polygons$cell_id
-        spe <- spe[, spe$cell_id %in% rownames(polygons)]
-        polygons <- polygons[polygons$cell_id %in% rownames(cd),]
-    }
-    spe <- spe[, rownames(polygons)]
-    colData(spe)$polygons <- polygons
+    # Extract and enrich colData via DataFrame
+    cd <- S4Vectors::DataFrame(colData(spe))
+    cd <- .addPolygonsToCD(cd, polygons, polygonsCol)
+
+    # Subset and reorder the SpatialExperiment
+    spe <- spe[, which(colnames(spe) %in% cd$cell_id), drop = FALSE]
+
+    # Replace colData with enriched DataFrame
+    colData(spe) <- cd
+
     return(spe)
 }
+
+
 #' .createPolygons
-#'
-#' @description This internal function creates polygons from a spatial data object.
+#' @name .createPolygons
+#' @rdname dot-createPolygons
+#' @description This internal function creates polygons from a data.frame or
+#' similar object.
 #'
 #' @param spat_obj A data frame or similar object containing spatial data.
 #' @param x A character vector specifying the x-coordinates.
@@ -248,16 +303,13 @@ addPolygonsToSPE <- function(spe, polygons)
 #' @keywords internal
 #' @importFrom sfheaders sf_polygon
 #' @importFrom sf st_as_sf
-#'
-#' @examples
-#' #TBD
-.createPolygons <- function(spat_obj, x=NULL, y=NULL, polygon_id=NULL, geometry="Geometry")
+.createPolygons <- function(spat_obj, x=NULL, y=NULL, polygon_id=NULL,
+                            geometry="Geometry")
 {
     if(all(!is.null(x), !is.null(y)))
     {
-        polygons <- sfheaders::sf_polygon(obj=spat_obj,
-                                      x=x, y=y,
-                                      polygon_id=polygon_id, keep=TRUE)
+        polygons <- sfheaders::sf_polygon(obj=spat_obj, x=x, y=y,
+                                    polygon_id=polygon_id, keep=TRUE)
     } else {
         polygons <- sf::st_as_sf(as.data.frame(spat_obj))
         ## check structure of polygons
@@ -273,8 +325,10 @@ addPolygonsToSPE <- function(spe, polygons)
     # polygons <- polygons[order(polygons$cell_id),]
     return(polygons)
 }
+
 #' readPolygonsCosmx
-#'
+#' @name readPolygonsCosmx
+#' @rdname readPolygonsCosmx
 #' @description This function reads polygon data specific to CosMx technology.
 #'
 #' @param polygonsFile A character string specifying the file path to the
@@ -292,33 +346,39 @@ addPolygonsToSPE <- function(spe, polygons)
 #' @export
 #'
 #' @examples
-#' # Read CosMx polygon data from a CSV file:
-#' # polygons <- readPolygonsCosmx("path/to/polygons.csv", type="csv")
+#' example(readCosmxSPE)
+#' polygons <- readPolygonsCosmx(metadata(spe)$polygons)
+#' polygons
 readPolygonsCosmx <- function(polygonsFile, type=c("csv", "parquet"),
-                              x="x_global_px",
-                              y="y_global_px",
-                              xloc="x_local_px",
-                              yloc="y_local_px",
-                              keepMultiPol=TRUE,
-                              verbose=FALSE)
+                            x="x_global_px",
+                            y="y_global_px",
+                            xloc="x_local_px",
+                            yloc="y_local_px",
+                            keepMultiPol=TRUE,
+                            verbose=FALSE)
 {
-    type=match.arg(type)
+    type <- match.arg(type)
     polygons <- readPolygons(polygonsFile, type=type, x=x, y=y, xloc=xloc,
                     yloc=yloc, keepMultiPol=keepMultiPol, verbose=verbose)
-    polygons <- st_cast(polygons, "GEOMETRY")
+    polygons <- sf::st_cast(polygons, "GEOMETRY")
     mandatory <- c("cell_id", "global", "is_multi", "multi_n")
     cnames <- colnames(polygons)[!colnames(polygons) %in% mandatory]
     polygons <- polygons[,c(mandatory, cnames)]
+    polygons <- .setActiveGeometry(polygons, "local")
+    polygons <- sf::st_cast(polygons, "GEOMETRY")
+    polygons <- .setActiveGeometry(polygons, "global")
     return(polygons)
 }
 
 #' readPolygonsXenium
-#'
+#' @name readPolygonsXenium
+#' @rdname readPolygonsXenium
 #' @description This function reads polygon data specific to Xenium technology.
 #'
 #' @param polygonsFile A character string specifying the file path to the
 #' polygon data.
 #' @param type A character string specifying the file type ("parquet" or "csv").
+#' Default is parquet.
 #' @param x A character string specifying the x-coordinate column.
 #' @param y A character string specifying the y-coordinate column.
 #' @param keepMultiPol A logical value indicating whether to keep multipolygons.
@@ -329,11 +389,12 @@ readPolygonsCosmx <- function(polygonsFile, type=c("csv", "parquet"),
 #' @export
 #'
 #' @examples
-#' # Read Xenium polygon data from a Parquet file:
-#' # polygons <- readPolygonsXenium("path/to/polygons.parquet", type="parquet")
+#' example(readXeniumSPE)
+#' polygons <- readPolygonsXenium(metadata(spe)$polygons, type="parquet")
+#' polygons
 readPolygonsXenium <- function(polygonsFile, type=c("parquet", "csv"),
-                   x="vertex_x", y="vertex_y", keepMultiPol=TRUE,
-                   verbose=FALSE)
+                    x="vertex_x", y="vertex_y", keepMultiPol=TRUE,
+                    verbose=FALSE)
 {
     type <- match.arg(type)
     polygons <- readPolygons(polygonsFile=polygonsFile, type=type, x=x, y=y,
@@ -345,16 +406,18 @@ readPolygonsXenium <- function(polygonsFile, type=c("parquet", "csv"),
 }
 
 #' readPolygonsMerfish
-#'
+#' @name readPolygonsMerfish
+#' @rdname readPolygonsMerfish
 #' @description This function reads polygon data specific to MERFISH technology.
 #'
-#' @param polygonsFolder A character string specifying the folder containing the
-#' polygon data files.
-#' @param type A character string specifying the file type ("HDF5" or "parquet").
+#' @param polygons A character string specifying the folder containing the
+#' polygon data files in case of HDF5, or a path to a parquet file (see `type`).
+#' @param type A character string specifying the file type("HDF5" or "parquet").
+#' Default is parquet.
 #' @param hdf5pattern A character string specifying the pattern to match HDF5
 #' files.
 #' @param keepMultiPol A logical value indicating whether to keep multipolygons.
-#' @param z_lev An integer specifying the Z level to filter the data. Default is
+#' @param zLev An integer specifying the Z level to filter the data. Default is
 #' `3L`.
 #' @param zcolumn A character string specifying the column name for the Z index.
 #' @param geometry A character string specifying the geometry column name.
@@ -367,25 +430,26 @@ readPolygonsXenium <- function(polygonsFile, type=c("parquet", "csv"),
 #' @importFrom arrow read_parquet
 #'
 #' @examples
-#' # Read MERFISH polygon data from a Parquet file:
-#' # polygons <- readPolygonsMerfish("path/to/polygon_folder", type="parquet")
-readPolygonsMerfish <- function(polygonsFolder, type=c("HDF5", "parquet"),
+#' example(readMerfishSPE)
+#' polygons <- readPolygonsMerfish(metadata(spe)$polygons, type="parquet")
+#' polygons
+readPolygonsMerfish <- function(polygons, type=c("parquet", "HDF5"),
                                 keepMultiPol=TRUE, hdf5pattern="hdf5",
-                                z_lev=3L, zcolumn="ZIndex",
+                                zLev=3L, zcolumn="ZIndex",
                                 geometry="Geometry",
                                 verbose=FALSE)
 {
     type <- match.arg(type)
     if (type=="HDF5")
     {
-        polfiles <- list.files(polygonsFolder, pattern=hdf5pattern,
+        polfiles <- list.files(polygons, pattern=hdf5pattern,
                                 full.names=TRUE)
         dfsfl <- lapply(seq_along(polfiles), function(i)
         {
-            poll <- readh5polygons(pol_file=polfiles[i])
+            poll <- readh5polygons(polFile=polfiles[i])
             df <- data.frame(cell_id=paste0("f", i-1, "_c", poll$ids),
-                             cell_ID=poll$ids,
-                             fov=i-1, geometry=sf::st_sfc(poll$g)) ## geometry can be a simple column
+                cell_ID=poll$ids, fov=i-1,
+                geometry=sf::st_sfc(poll$g)) ## geometry can be a simple column
             dfsf <- sf::st_sf(df)
         })
         polygons <- do.call(rbind, dfsfl)
@@ -393,10 +457,11 @@ readPolygonsMerfish <- function(polygonsFolder, type=c("HDF5", "parquet"),
         polygons <- .checkPolygonsValidity(polygons, keepMultiPol=keepMultiPol)
         return(polygons)
     } else { ## case parquet
-        polfile <- list.files(polygonsFolder, pattern=type,
-                              full.names=TRUE)
+        # polfile <- list.files(polygonsFolder, pattern=type,
+                            # full.names=TRUE)
+        polfile <- polygons
         polygons <- arrow::read_parquet(polfile, as_data_frame=TRUE)
-        polygons <- polygons[polygons[[zcolumn]]==z_lev,]
+        polygons <- polygons[polygons[[zcolumn]]==zLev,]
         polygons$cell_id <- polygons$EntityID
         polygons <- .createPolygons(polygons)
         polygons <- .renameGeometry(polygons, geometry, "global")
@@ -409,83 +474,118 @@ readPolygonsMerfish <- function(polygonsFolder, type=c("HDF5", "parquet"),
     polygons <- polygons[,c(mandatory, cnames)]
     return(polygons)
 }
-
-#' computeAreaFromPolygons
-#'
-#' @description This function computes the area from polygon data and adds it to the `colData`.
+#' computeCenterFromPolygons
+#' @name computeCenterFromPolygons
+#' @rdname computeCenterFromPolygons
+#' @description This function computes the center coordinates on x and y axis
+#' from polygon data and adds it to the `colData`. It is necessary only for
+#' Merfish.
 #'
 #' @param polygons An `sf` object containing polygon data.
-#' @param coldata A `DataFrame` containing the `colData` to which area information will be added.
+#' @param coldata A `DataFrame` containing the `colData` to which center
+#' coordinates information will be added.
 #'
-#' @return A `DataFrame` with the added area information.
+#' @return A `DataFrame` with the added center information.
 #' @export
 #'
 #' @examples
-#' # Assuming `polygons` is an sf object and `coldata` is a DataFrame:
-#' # coldata <- computeAreaFromPolygons(polygons, coldata)
-computeAreaFromPolygons <- function(polygons, coldata)
+#' example(readPolygonsMerfish)
+#' coldata <- computeCenterFromPolygons(polygons, colData(spe))
+#' colData(spe) <- coldata
+computeCenterFromPolygons <- function(polygons, coldata)
 {
+    # this needs to be changed to be independent from coldata
     cd <- coldata
     # cd$Area <- NA
-    area <- sf::st_area(polygons)
-    # idx <- match(names(area), rownames(cd))
-    cd$um_area <- unlist(area)
+    centroid <- sf::st_centroid(polygons)
+    ## get active name of geometry instead of global
+    center_x <- lapply(centroid$geometry, function(x)
+    {
+        x[1]
+    })
+    ## get active name of geometry instead of global
+    center_y <- lapply(centroid$geometry, function(x)
+    {
+        x[2]
+    })
+    cd$center_x <- unlist(center_x)
+    cd$center_y <- unlist(center_y)
     return(cd)
 }
 
-#' computeAspectRatioFromPolygons
-#'
-#' @description This function computes the aspect ratio from polygon data and adds it to the `colData`.
+
+#' computeAreaFromPolygons
+#' @name computeAreaFromPolygons
+#' @rdname computeAreaFromPolygons
+#' @description This function computes the area from polygon data.
 #'
 #' @param polygons An `sf` object containing polygon data.
-#' @param coldata A `DataFrame` containing the `colData` to which aspect ratio information will be added.
 #'
-#' @return A `DataFrame` with the added aspect ratio information.
+#' @return A `numeric` vector with the area information.
 #' @export
 #'
 #' @examples
-#' # Assuming `polygons` is an sf object and `coldata` is a DataFrame:
-#' # coldata <- computeAspectRatioFromPolygons(polygons, coldata)
-computeAspectRatioFromPolygons <- function(polygons, coldata)
+#' example(readPolygonsMerfish)
+#' area <- computeAreaFromPolygons(polygons)
+#' area
+computeAreaFromPolygons <- function(polygons)
 {
-    cd <- coldata
-    stopifnot("cell_id" %in% colnames(cd))
-    # aspRatL <- list()
-    aspRatL <- lapply(polygons$global[!polygons$is_multi], function(x) ## get active name of geometry instead of global
-    {
-        # xx <- polygons$global[!polygons$is_multi]
-        # for(i in seq_along(xx))
-        # {
-            # print(i)
-            # x <- xx[[i]]
-            # aspRatL[[i]] <- (max(x[[1]][,2]) - min(x[[1]][,2]))/(max(x[[1]][,1]) - min(x[[1]][,1]))
-        # }
-        (max(x[[1]][,2]) - min(x[[1]][,2]))/(max(x[[1]][,1]) - min(x[[1]][,1]))
-    }) ## to parallelize with bplapply
-    names(aspRatL) <- polygons$cell_id[!polygons$is_multi]
+    stopifnot(is(polygons, "sf"))
+    area <- sf::st_area(polygons)
+    um_area <- unlist(area)
+    return(um_area)
+}
 
-    cd$AspectRatio <- NA
-    posz <- match(names(aspRatL), cd$cell_id)
-    cd$AspectRatio[posz] <- unlist(aspRatL)
-    return(cd)
+
+#' computeAspectRatioFromPolygons
+#' @name computeAspectRatioFromPolygons
+#' @rdname computeAspectRatioFromPolygons
+#' @description This function computes the aspect ratio from polygon data.
+#'
+#' @param polygons An `sf` object containing polygon data.
+#'
+#' @return A `numeric` vector with the aspect ratio information.
+#' @export
+#'
+#' @examples
+#' example(readPolygonsMerfish)
+#' ar <- computeAspectRatioFromPolygons(polygons)
+#' ar
+computeAspectRatioFromPolygons <- function(polygons)
+{
+    stopifnot(all(is(polygons, "sf"), ("is_multi" %in% colnames(polygons))))
+    aspRatL <- numeric(nrow(polygons))
+    if(any(polygons$is_multi)) {
+        aspRatL[which(polygons$is_multi)] <- NA
+        warning("Found ", sum(polygons$is_multi),
+            " multi-poligons: returning NA aspect ratio for them.")
+    }
+    aspRatL[!polygons$is_multi] <- lapply(polygons$global[!polygons$is_multi],
+        function(x) {
+            (max(x[[1]][, 2]) - min(x[[1]][, 2]))/(max(x[[1]][, 1]) -
+                                                    min(x[[1]][, 1]))
+    })
+    names(aspRatL) <- polygons$cell_id
+    ar <- unlist(aspRatL)
+    return(ar)
 }
 
 #' readh5polygons
-#'
+#' @name readh5polygons
+#' @rdname readh5polygons
 #' @description This function reads polygon data from an HDF5 file.
 #'
-#' @param pol_file A character string specifying the file path to the HDF5 polygon data.
+#' @param polFile A character string specifying the file path to the HDF5
+#' polygon data.
 #'
-#' @return A list containing the polygon geometries and their associated cell IDs.
+#' @return A list containing the polygon geometries and their associated cell_id
 #' @author Lambda Moses
-#' @export
-#'
-#' @examples
-#' # Read polygons from an HDF5 file:
-#' # polygons <- readh5polygons("path/to/polygons.h5")
-readh5polygons <- function(pol_file)
+#' @importFrom rhdf5 h5dump
+#' @importFrom sf st_polygon
+#' @keywords internal
+readh5polygons <- function(polFile)
 {
-    l <- rhdf5::h5dump(pol_file)[[1]]
+    l <- rhdf5::h5dump(polFile)[[1]]
     cell_ids <- names(l)
     geometries <- lapply(l, function(m) {
         sf::st_polygon(list(t(m[["zIndex_0"]]$p_0$coordinates[,,1])))

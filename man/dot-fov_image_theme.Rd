@@ -4,19 +4,14 @@
 \alias{.fov_image_theme}
 \title{.fov_image_theme}
 \usage{
-.fov_image_theme(
-  back.color = "black",
-  back.border = NA,
-  title.col = "white",
-  aspect_ratio = NULL
-)
+.fov_image_theme(backColor = "black", backBorder = NA, titleCol = "white")
 }
 \arguments{
-\item{back.color}{not used}
+\item{backColor}{not used}
 
-\item{back.border}{color for the borders of the background (default=NA)}
+\item{backBorder}{color for the borders of the background (default=NA)}
 
-\item{title.col}{character indicating the color of the title}
+\item{titleCol}{character indicating the color of the title}
 }
 \value{
 a ggplot2 theme object

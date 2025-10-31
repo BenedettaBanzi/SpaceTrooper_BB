@@ -4,15 +4,15 @@
 \alias{createPaletteFromColData}
 \title{createPaletteFromColData}
 \usage{
-createPaletteFromColData(spe, palette_names, palette_colors)
+createPaletteFromColData(spe, paletteNames, paletteColors)
 }
 \arguments{
 \item{spe}{A `SpatialExperiment` object with spatial transcriptomics data.}
 
-\item{palette_names}{A character string specifying the column in
+\item{paletteNames}{A character string specifying the column in
 `colData(spe)` to be used for the names in the palette.}
 
-\item{palette_colors}{A character string specifying the column in
+\item{paletteColors}{A character string specifying the column in
 `colData(spe)` to be used for the colors in the palette.}
 }
 \value{
@@ -27,6 +27,7 @@ the `colData` of a `SpatialExperiment` object.
 }
 \details{
 The function creates a new palette based on the unique combinations
-of values in the specified `palette_names` and `palette_colors` columns in
+of values in the specified `paletteNames` and `paletteColors` columns in
 `colData(spe)`.
 }
+\keyword{internal}

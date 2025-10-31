@@ -1,0 +1,15 @@
+Xenium_small data have been produced by Estella Dong and are the same that can
+be found in the SpatialExperimentIO.
+The original author has approved for us to use them in our package.
+Thanks to Estella for sharing these with us!
+
+Dario Righelli and Benedetta Banzi worked on the following datasets.
+
+Merfish_Tiny data have been downloaded from the merfish
+[official website](https://vizgen.com/technology/) and subset to obtain a
+smaller dataset.
+The Merfish_polygons_h5 have been processed in the same way.
+
+The CosMx_DBKero_Tiny dataset has been downloaded from the
+[DBkero website](https://kero.hgc.jp/) and processed to obtain a smaller
+dataset.

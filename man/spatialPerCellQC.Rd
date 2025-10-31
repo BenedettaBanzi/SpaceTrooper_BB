@@ -7,36 +7,44 @@
 spatialPerCellQC(
   spe,
   micronConvFact = 0.12,
-  negProbList = c("NegPrb", "Negative", "SystemControl", "NegControlProbe",
-    "NegControlCodeWord", "UnassignedCodeWord", "Blank")
+  rmZeros = TRUE,
+  negProbList = c("NegPrb", "Negative", "SystemControl", "Ms IgG1", "Rb IgG", "BLANK_",
+    "NegControlProbe", "NegControlCodeword", "UnassignedCodeword", "Blank"),
+  use_altexps = NULL
 )
 }
 \arguments{
-\item{spe}{A `SpatialExperiment` object containing spatial transcriptomics
-data.}
+\item{spe}{A `SpatialExperiment` object containing spatial data.}
 
-\item{micronConvFact}{A numeric value for converting pixel dimensions to
-microns. Default is `0.12`.}
+\item{micronConvFact}{Numeric factor to convert pixels to microns. Default
+`0.12`.}
 
-\item{negProbList}{A character vector of patterns used to identify negative
-probes.
-Default values are:
-- For Nanostring CosMx: `"NegPrb"`, `"Negative"`, `"SystemControl"`
-- For Xenium: `"NegControlProbe"`, `"NegControlCodeWord"`,
-`"UnassignedCodeWord"`
-- For MERFISH: `"Blank"`}
+\item{rmZeros}{logical for removing zero counts cells (default is TRUE).}
+
+\item{negProbList}{Character vector of patterns to identify negative probes.
+Defaults include:
+- Nanostring CosMx: `"NegPrb"`, `"Negative"`, `"SystemControl"`
+- Xenium: `"NegControlProbe"`, `"NegControlCodeword"`,
+  `"UnassignedCodeword"`
+- MERFISH: `"Blank"`}
+
+\item{use_altexps}{logical for `use_altexps` in `scuttle` package.
+If TRUE uses the altexps for computing some metrics on it.
+Useful for interoperability with `SpatialExperimentIO`.
+(See \link[scuttle]{addPerCellQC} for additional details).}
 }
 \value{
-The `SpatialExperiment` object with added quality control metrics in
-`colData`.
+A `SpatialExperiment` object with added QC metrics in `colData`.
 }
 \description{
-Perform Per-Cell Quality Control on a SpatialExperiment Object
-
-This function calculates quality control metrics for each cell in a
-`SpatialExperiment` object and adds them to `colData`.
+Computes quality‐control metrics for each cell and adds them to `colData`.
 }
 \details{
-The function computes several QC metrics, including control probe
-sums, target probe sums, and the ratio of control probes to the total.
+Calculates sums and detected counts for control and target probes,
+computes ratio and count‐area metrics, converts coords to microns for
+CosMx, and drops zero‐count cells.
+}
+\examples{
+example(readCosmxSPE)
+spe <- spatialPerCellQC(spe)
 }

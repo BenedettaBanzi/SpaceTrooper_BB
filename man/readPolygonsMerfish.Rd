@@ -5,28 +5,29 @@
 \title{readPolygonsMerfish}
 \usage{
 readPolygonsMerfish(
-  polygonsFolder,
-  type = c("HDF5", "parquet"),
+  polygons,
+  type = c("parquet", "HDF5"),
   keepMultiPol = TRUE,
   hdf5pattern = "hdf5",
-  z_lev = 3L,
+  zLev = 3L,
   zcolumn = "ZIndex",
   geometry = "Geometry",
   verbose = FALSE
 )
 }
 \arguments{
-\item{polygonsFolder}{A character string specifying the folder containing the
-polygon data files.}
+\item{polygons}{A character string specifying the folder containing the
+polygon data files in case of HDF5, or a path to a parquet file (see `type`).}
 
-\item{type}{A character string specifying the file type ("HDF5" or "parquet").}
+\item{type}{A character string specifying the file type("HDF5" or "parquet").
+Default is parquet.}
 
 \item{keepMultiPol}{A logical value indicating whether to keep multipolygons.}
 
 \item{hdf5pattern}{A character string specifying the pattern to match HDF5
 files.}
 
-\item{z_lev}{An integer specifying the Z level to filter the data. Default is
+\item{zLev}{An integer specifying the Z level to filter the data. Default is
 `3L`.}
 
 \item{zcolumn}{A character string specifying the column name for the Z index.}
@@ -43,6 +44,7 @@ An `sf` object containing the MERFISH polygon data.
 This function reads polygon data specific to MERFISH technology.
 }
 \examples{
-# Read MERFISH polygon data from a Parquet file:
-# polygons <- readPolygonsMerfish("path/to/polygon_folder", type="parquet")
+example(readMerfishSPE)
+polygons <- readPolygonsMerfish(metadata(spe)$polygons, type="parquet")
+polygons
 }

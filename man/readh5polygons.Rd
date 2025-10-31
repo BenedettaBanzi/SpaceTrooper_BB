@@ -4,21 +4,19 @@
 \alias{readh5polygons}
 \title{readh5polygons}
 \usage{
-readh5polygons(pol_file)
+readh5polygons(polFile)
 }
 \arguments{
-\item{pol_file}{A character string specifying the file path to the HDF5 polygon data.}
+\item{polFile}{A character string specifying the file path to the HDF5
+polygon data.}
 }
 \value{
-A list containing the polygon geometries and their associated cell IDs.
+A list containing the polygon geometries and their associated cell_id
 }
 \description{
 This function reads polygon data from an HDF5 file.
 }
-\examples{
-# Read polygons from an HDF5 file:
-# polygons <- readh5polygons("path/to/polygons.h5")
-}
 \author{
 Lambda Moses
 }
+\keyword{internal}

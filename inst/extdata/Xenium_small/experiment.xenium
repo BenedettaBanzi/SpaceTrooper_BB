@@ -1,0 +1,38 @@
+{
+    "run_name": "PREVIEW: Human Breast Cancer",
+    "run_start_time": "",
+    "region_name": "Replicate 1",
+    "preservation_method": "ffpe",
+    "num_cells": 167780,
+    "transcripts_per_cell": 166.0,
+    "transcripts_per_100um": 105.9945809453222,
+    "cassette_name": "human_breast_cancer_SIM1",
+    "slide_id": "0001879",
+    "panel_design_id": "PD_260",
+    "panel_name": "Breast Cancer Tumor Microenvironment",
+    "panel_organism": "Human",
+    "panel_tissue_type": "Breast",
+    "panel_num_targets_predesigned": 280,
+    "panel_num_targets_custom": 33,
+    "pixel_size": 0.2125,
+    "instrument_sn": "Xenium prototype instrument",
+    "instrument_sw_version": "Development",
+    "analysis_sw_version": "Xenium-1.0.1",
+    "experiment_uuid": "",
+    "cassette_uuid": "",
+    "roi_uuid": "",
+    "z_step_size": 3.0,
+    "well_uuid": "",
+    "images": {
+        "morphology_filepath": "morphology.ome.tif",
+        "morphology_mip_filepath": "morphology_mip.ome.tif",
+        "morphology_focus_filepath": "morphology_focus.ome.tif"
+    },
+    "xenium_explorer_files": {
+        "transcripts_zarr_filepath": "transcripts.zarr.zip",
+        "cells_zarr_filepath": "cells.zarr.zip",
+        "cell_features_zarr_filepath": "cell_feature_matrix.zarr.zip",
+        "analysis_zarr_filepath": "analysis.zarr.zip",
+        "analysis_summary_filepath": "analysis_summary.html"
+    }
+}

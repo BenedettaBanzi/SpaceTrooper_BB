@@ -13,7 +13,8 @@
 
 \item{to}{character indicating the new name of the geometry}
 
-\item{activate}{logical indicating if the renamed geometry has to be activated}
+\item{activate}{logical indicating if the renamed geometry has to be
+activated}
 }
 \value{
 an sf object
@@ -25,5 +26,6 @@ Default behaviour is to check if the renamed geometry is already active and
 leave it as active with the new name.
 }
 \examples{
-#TBD
+example(readPolygonsCosmx)
+.renameGeometry(polygons, "global", "global1")
 }

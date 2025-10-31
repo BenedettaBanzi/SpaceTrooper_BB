@@ -41,6 +41,7 @@ An `sf` object containing the CosMx polygon data.
 This function reads polygon data specific to CosMx technology.
 }
 \examples{
-# Read CosMx polygon data from a CSV file:
-# polygons <- readPolygonsCosmx("path/to/polygons.csv", type="csv")
+example(readCosmxSPE)
+polygons <- readPolygonsCosmx(metadata(spe)$polygons)
+polygons
 }

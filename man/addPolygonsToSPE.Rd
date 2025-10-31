@@ -4,12 +4,15 @@
 \alias{addPolygonsToSPE}
 \title{addPolygonsToSPE}
 \usage{
-addPolygonsToSPE(spe, polygons)
+addPolygonsToSPE(spe, polygons, polygonsCol = "polygons")
 }
 \arguments{
 \item{spe}{A `SpatialExperiment` object to which polygons will be added.}
 
 \item{polygons}{An `sf` object containing the polygon data.}
+
+\item{polygonsCol}{character indicating the name of the polygons column to
+add into the colData (default is `polygons`).}
 }
 \value{
 The `SpatialExperiment` object with polygons added to the `colData`.
@@ -18,6 +21,8 @@ The `SpatialExperiment` object with polygons added to the `colData`.
 This function adds polygon data to a `SpatialExperiment` object.
 }
 \examples{
-# Assuming `spe` is a SpatialExperiment object and `polygons` is an sf object:
-# spe <- addPolygonsToSPE(spe, polygons)
+example(readCosmxSPE)
+polygons <- readPolygonsCosmx(metadata(spe)$polygons)
+spe <- addPolygonsToSPE(spe, polygons)
+spe$polygons
 }

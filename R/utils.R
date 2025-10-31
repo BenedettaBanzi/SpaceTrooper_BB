@@ -1,21 +1,24 @@
 #' .getActiveGeometryName
-#'
+#' @name .getActiveGeometryName
+#' @rdname dot-getActiveGeometryName
 #' @param sf an sf object
 #'
 #' @return character with the name of the active geometry
 #' @export
 #'
 #' @examples
-#' #TBD
+#' example(readPolygonsCosmx)
+#' .getActiveGeometryName(polygons)
 .getActiveGeometryName <- function(sf)
 {
     stopifnot(is(sf, "sf"))
-    cn = attr(sf, "sf_column")
+    cn <- attr(sf, "sf_column")
     return(cn)
 }
 
 #' .setActiveGeometry
-#'
+#' @name .setActiveGeometry
+#' @rdname dot-setActiveGeometry
 #' @param sf an sf object
 #' @param name character for the geometry to activate
 #'
@@ -23,7 +26,8 @@
 #' @export
 #'
 #' @examples
-#' #TBD
+#' example(readPolygonsCosmx)
+#' .setActiveGeometry(polygons, "local")
 .setActiveGeometry <- function(sf, name)
 {
     stopifnot(is(sf, "sf"), name %in% names(sf))
@@ -32,7 +36,8 @@
 }
 
 #' .renameGeometry
-#'
+#' @name .renameGeometry
+#' @rdname dot-renameGeometry
 #' @description renames the `from` to `to` geometry of the `sf` object.
 #' If `activate` is `TRUE` it set as the active geometry the new geometry name.
 #' Default behaviour is to check if the renamed geometry is already active and
@@ -41,13 +46,14 @@
 #' @param sf an sf object with the `from` geometry
 #' @param from character indicating the name of the geometry to change
 #' @param to character indicating the new name of the geometry
-#' @param activate logical indicating if the renamed geometry has to be activated
+#' @param activate logical indicating if the renamed geometry has to be
+#' activated
 #'
 #' @return an sf object
 #' @export
-#'
 #' @examples
-#' #TBD
+#' example(readPolygonsCosmx)
+#' .renameGeometry(polygons, "global", "global1")
 .renameGeometry <- function(sf, from, to, activate=FALSE)
 {
     stopifnot(all(is(sf, "sf"), from %in% names(sf)))
@@ -60,6 +66,10 @@
 }
 
 #' getFencesOutlier
+#' @name getFencesOutlier
+#' @rdname getFencesOutlier
+#' @description
+#'
 #' Retrieve Threshold (Fence) Values from a SpatialExperiment Object
 #'
 #' This function extracts the threshold values, also known as fences,
@@ -67,10 +77,12 @@
 #'
 #' @param spe A `SpatialExperiment` object containing spatial transcriptomics
 #' data.
-#' @param fences_of A character string specifying the name of the column in
+#' @param fencesOf A character string specifying the name of the column in
 #' `colData(spe)` from which to extract the fence values. This column should
-#' contain an `outlier.filter` object.
-#' @param decimal.round An optional integer specifying the number of decimal
+#' contain an `outlier.filter` object (see `computeSpatialOutlier```).
+#' @param highLow character indicating which fence to get if "higher", "lower"
+#' or "both" (default is "both").
+#' @param decimalRound An optional integer specifying the number of decimal
 #' places to which the fence values should be rounded. If `NULL`, no rounding is
 #'  applied. Default is `NULL`.
 #'
@@ -80,20 +92,22 @@
 #' @importFrom SummarizedExperiment colData
 #' @export
 #' @examples
-#' #TBD
-getFencesOutlier <- function(spe, fences_of,
-                    high_low=c("both", "lower", "higher"), decimal_round=NULL)
+#' example(computeSpatialOutlier)
+#' getFencesOutlier(spe, fencesOf="log2CountArea_outlier_mc")
+getFencesOutlier <- function(spe, fencesOf,
+                    highLow=c("both", "lower", "higher"), decimalRound=NULL)
 {
     stopifnot(is(spe, "SpatialExperiment"))
-    stopifnot(fences_of %in% names(colData(spe)))
-    stopifnot(is(colData(spe)[[fences_of]], "outlier.filter"))
-    high_low <- match.arg(high_low)
-    fences <- attr(colData(spe)[[fences_of]], "thresholds")
-    if(!is.null(decimal_round)) {fences <- round(fences, decimal_round)}
-    fences <- switch (high_low,
+    stopifnot(fencesOf %in% names(colData(spe)))
+    stopifnot(is(colData(spe)[[fencesOf]], "outlier.filter"))
+    highLow <- match.arg(highLow)
+    fences <- attr(colData(spe)[[fencesOf]], "thresholds")
+    if(!is.null(decimalRound)) {fences <- round(fences, decimalRound)}
+    fences <- switch (highLow,
         both = {fences},
         lower = {fences[1]},
         higher = {fences[2]}
     )
     return(fences)
 }
+

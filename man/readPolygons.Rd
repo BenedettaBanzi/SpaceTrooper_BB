@@ -46,9 +46,9 @@ An `sf` object with the loaded and validated polygons.
 \description{
 Read and Validate Polygons from a File
 
-This function reads polygon data from a specified file, validates the polygons,
-and returns them as an `sf` object. It supports multiple file formats and can
-handle both global and local coordinates.
+This function reads polygon data from a specified file, validates the
+polygons, and returns them as an `sf` object. It supports multiple file
+formats and can handle both global and local coordinates.
 }
 \details{
 The function reads polygon data from the specified file and formats.
@@ -57,10 +57,7 @@ provided. If the file type is `"h5"`, the function currently does not handle
 the data, as this part of the code is not implemented.
 }
 \examples{
-# Reading polygon data from a CSV file:
-# polygons <- readPolygons("~/Downloads/CosMx_data/polygons.csv")
-
-# Reading polygon data from a Parquet file with verbose output:
-# polygons <- readPolygons("~/Downloads/CosMx_data/polygons.parquet",
-#                         type = "parquet", verbose = TRUE)
+example(readCosmxSPE)
+polygons <- readPolygons(metadata(spe)$polygons)
+polygons
 }

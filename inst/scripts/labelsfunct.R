@@ -1,10 +1,12 @@
-addLabelsDBKero <- function(spe, filename)
+addLabelsDBKero <- function(spe)
 {
-    labels <- read.table(file="~/Downloads/CosMx_data/DBKero/CosMx_Breast/CosMx_data_Case2/cosmx_dbkero_IST_labels_complete_simple_colors.tsv", sep="\t", header=TRUE)
+    labf <- system.file(file.path("extdata", "CosMx_DBKero_Tiny",
+                            "labels_tiny.tsv"), package="SpaceTrooper")
+    labs <-  read.table(file=labf, sep="\t", header=TRUE)
     spe$labels <- NA
     spe$labels_colors <- "black"
-    spe$labels[match(labels$cell_id, spe$cell_id)] <- labels$InSituType_simple
-    spe$labels_colors[match(labels$cell_id, spe$cell_id)] <- labels$IST_simple_colors
+    spe$labels[match(labs$cell_id, spe$cell_id)] <- labs$label
+    spe$labels_colors[match(labs$cell_id, spe$cell_id)] <- labs$lab_color
     spe$labels <- as.factor(spe$labels)
     spe$labels_colors <- as.factor(spe$labels_colors)
     spe

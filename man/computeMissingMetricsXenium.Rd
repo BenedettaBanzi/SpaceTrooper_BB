@@ -4,20 +4,28 @@
 \alias{computeMissingMetricsXenium}
 \title{computeMissingMetricsXenium}
 \usage{
-computeMissingMetricsXenium(pol_file, coldata, keep_polygons = FALSE)
+computeMissingMetricsXenium(
+  polFile,
+  colData,
+  keepPolygons = FALSE,
+  polygonsCol = "polygons"
+)
 }
 \arguments{
-\item{pol_file}{A character string specifying the file path to the polygon
+\item{polFile}{A character string specifying the file path to the polygon
 data.}
 
-\item{coldata}{A `DataFrame` containing the `colData` for the Xenium dataset.}
+\item{colData}{A `DataFrame` containing the `colData` for the Xenium dataset.}
 
-\item{keep_polygons}{A logical value indicating whether to keep the polygon
+\item{keepPolygons}{A logical value indicating whether to keep the polygon
 data in the resulting `colData`. Default is `FALSE`.}
+
+\item{polygonsCol}{character indicating the name of the polygons column to
+add into the colData (default is `polygons`).}
 }
 \value{
 A `DataFrame` containing the updated `colData` with computed metrics.
-If `keep_polygons` is `TRUE`, the polygon data is also included.
+If `keepPolygons` is `TRUE`, the polygon data is also included.
 }
 \description{
 Compute Missing Metrics for Xenium Data
@@ -33,9 +41,7 @@ the provided `colData`. Optionally, the polygon data can be kept in the
 returned `colData`.
 }
 \examples{
-# Assuming 'pol_file' is the path to the polygon file and 'coldata' is a
-# DataFrame:
-#updated_cd <- computeMissingMetricsXenium(pol_file = "path/to/polygons",
-#                                          coldata = coldata,
-#                                          keep_polygons = TRUE)
+example(readXeniumSPE)
+colData(spe) <- computeMissingMetricsXenium(metadata(spe)$polygons,
+    colData(spe), keepPolygons=TRUE)
 }
